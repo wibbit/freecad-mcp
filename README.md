@@ -53,6 +53,17 @@ And you can start RPC server by "Start RPC Server" command in "FreeCAD MCP" tool
 
 ![start_rpc_server](./assets/start_rpc_server.png)
 
+### Auto-Start RPC Server
+
+By default, the RPC server must be started manually each time FreeCAD opens. To start it automatically:
+
+1. Open the **FreeCAD MCP** menu (switch to the MCP Addon workbench first)
+2. Check **Auto-Start Server**
+
+The setting is saved to `freecad_mcp_settings.json` and persists across sessions. On the next FreeCAD launch, the RPC server will start automatically once the application finishes loading.
+
+You can disable it at any time by unchecking **Auto-Start Server** in the same menu.
+
 ## Setting up Claude Desktop
 
 Pre-installation of the [uvx](https://docs.astral.sh/uv/guides/tools/) is required.
