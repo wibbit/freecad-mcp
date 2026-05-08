@@ -68,7 +68,7 @@ class FreeCADConnection:
     ) -> str | None:
         try:
             result = self.server.execute_code(_SCREENSHOT_SUPPORT_CHECK)
-            if not result.get("success", False) or "Current view does not support screenshots" in result.get("message", ""):
+            if not result.get("success", False) or "Current view does not support screenshots" in (result.get("data") or {}).get("output", ""):
                 logger.info("Screenshot unavailable in current view (likely Spreadsheet or TechDraw view)")
                 return None
 

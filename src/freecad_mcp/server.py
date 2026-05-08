@@ -1,3 +1,4 @@
+import json
 import logging
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator, Dict, Literal
@@ -7,17 +8,7 @@ from mcp.types import ImageContent, TextContent
 
 from .freecad_client import FreeCADConnection
 from .operations import (
-    create_document_operation,
-    create_object_operation,
-    delete_object_operation,
-    edit_object_operation,
-    execute_code_operation,
-    get_object_operation,
-    get_objects_operation,
-    get_parts_list_operation,
     get_view_operation,
-    insert_part_from_library_operation,
-    list_documents_operation,
     run_fem_analysis_operation,
 )
 from .prompt_text import ASSET_CREATION_STRATEGY
@@ -30,6 +21,12 @@ logging.basicConfig(
 logger = logging.getLogger("FreeCADMCPserver")
 
 state = ServerState()
+
+
+def add_screenshot_if_available(response: list, screenshot) -> list:
+    if screenshot and not state.only_text_feedback:
+        response.append(ImageContent(type="image", data=screenshot, mimeType="image/png"))
+    return response
 
 
 @asynccontextmanager
@@ -91,7 +88,16 @@ def create_document(ctx: Context, name: str) -> list[TextContent]:
         }
         ```
     """
-    return create_document_operation(get_freecad_connection(), name)
+    freecad = get_freecad_connection()
+    try:
+        res = freecad.create_document(name)
+        if res["success"]:
+            return [TextContent(type="text", text=f"Document '{res['data']['document_name']}' created successfully")]
+        else:
+            return [TextContent(type="text", text=f"Failed to create document: {res['error']}")]
+    except Exception as e:
+        logger.error(f"Failed to create document: {str(e)}")
+        return [TextContent(type="text", text=f"Failed to create document: {str(e)}")]
 
 
 @mcp.tool()
@@ -219,15 +225,19 @@ def create_object(
         }
         ```
     """
-    return create_object_operation(
-        get_freecad_connection(),
-        state.only_text_feedback,
-        doc_name,
-        obj_type,
-        obj_name,
-        analysis_name,
-        obj_properties,
-    )
+    freecad = get_freecad_connection()
+    try:
+        obj_data = {"Name": obj_name, "Type": obj_type, "Properties": obj_properties or {}, "Analysis": analysis_name}
+        res = freecad.create_object(doc_name, obj_data)
+        screenshot = freecad.get_active_screenshot()
+        if res["success"]:
+            response = [TextContent(type="text", text=f"Object '{res['data']['object_name']}' created successfully")]
+        else:
+            response = [TextContent(type="text", text=f"Failed to create object: {res['error']}")]
+        return add_screenshot_if_available(response, screenshot)
+    except Exception as e:
+        logger.error(f"Failed to create object: {str(e)}")
+        return [TextContent(type="text", text=f"Failed to create object: {str(e)}")]
 
 
 @mcp.tool()
@@ -245,13 +255,18 @@ def edit_object(
     Returns:
         A message indicating the success or failure of the object editing and a screenshot of the object.
     """
-    return edit_object_operation(
-        get_freecad_connection(),
-        state.only_text_feedback,
-        doc_name,
-        obj_name,
-        obj_properties,
-    )
+    freecad = get_freecad_connection()
+    try:
+        res = freecad.edit_object(doc_name, obj_name, {"Properties": obj_properties})
+        screenshot = freecad.get_active_screenshot()
+        if res["success"]:
+            response = [TextContent(type="text", text=f"Object '{res['data']['object_name']}' edited successfully")]
+        else:
+            response = [TextContent(type="text", text=f"Failed to edit object: {res['error']}")]
+        return add_screenshot_if_available(response, screenshot)
+    except Exception as e:
+        logger.error(f"Failed to edit object: {str(e)}")
+        return [TextContent(type="text", text=f"Failed to edit object: {str(e)}")]
 
 
 @mcp.tool()
@@ -265,12 +280,18 @@ def delete_object(ctx: Context, doc_name: str, obj_name: str) -> list[TextConten
     Returns:
         A message indicating the success or failure of the object deletion and a screenshot of the object.
     """
-    return delete_object_operation(
-        get_freecad_connection(),
-        state.only_text_feedback,
-        doc_name,
-        obj_name,
-    )
+    freecad = get_freecad_connection()
+    try:
+        res = freecad.delete_object(doc_name, obj_name)
+        screenshot = freecad.get_active_screenshot()
+        if res["success"]:
+            response = [TextContent(type="text", text=f"Object '{res['data']['object_name']}' deleted successfully")]
+        else:
+            response = [TextContent(type="text", text=f"Failed to delete object: {res['error']}")]
+        return add_screenshot_if_available(response, screenshot)
+    except Exception as e:
+        logger.error(f"Failed to delete object: {str(e)}")
+        return [TextContent(type="text", text=f"Failed to delete object: {str(e)}")]
 
 
 @mcp.tool()
@@ -283,7 +304,18 @@ def execute_code(ctx: Context, code: str) -> list[TextContent | ImageContent]:
     Returns:
         A message indicating the success or failure of the code execution, the output of the code execution, and a screenshot of the object.
     """
-    return execute_code_operation(get_freecad_connection(), state.only_text_feedback, code)
+    freecad = get_freecad_connection()
+    try:
+        res = freecad.execute_code(code)
+        screenshot = freecad.get_active_screenshot()
+        if res["success"]:
+            response = [TextContent(type="text", text=f"Code executed successfully.\nOutput: {res['data']['output']}")]
+        else:
+            response = [TextContent(type="text", text=f"Failed to execute code: {res['error']}")]
+        return add_screenshot_if_available(response, screenshot)
+    except Exception as e:
+        logger.error(f"Failed to execute code: {str(e)}")
+        return [TextContent(type="text", text=f"Failed to execute code: {str(e)}")]
 
 
 @mcp.tool()
@@ -328,11 +360,18 @@ def insert_part_from_library(ctx: Context, relative_path: str) -> list[TextConte
     Returns:
         A message indicating the success or failure of the part insertion and a screenshot of the object.
     """
-    return insert_part_from_library_operation(
-        get_freecad_connection(),
-        state.only_text_feedback,
-        relative_path,
-    )
+    freecad = get_freecad_connection()
+    try:
+        res = freecad.insert_part_from_library(relative_path)
+        screenshot = freecad.get_active_screenshot()
+        if res["success"]:
+            response = [TextContent(type="text", text="Part inserted from library successfully")]
+        else:
+            response = [TextContent(type="text", text=f"Failed to insert part from library: {res['error']}")]
+        return add_screenshot_if_available(response, screenshot)
+    except Exception as e:
+        logger.error(f"Failed to insert part from library: {str(e)}")
+        return [TextContent(type="text", text=f"Failed to insert part from library: {str(e)}")]
 
 
 @mcp.tool()
@@ -346,7 +385,18 @@ def get_objects(ctx: Context, doc_name: str) -> list[TextContent | ImageContent]
     Returns:
         A list of objects in the document and a screenshot of the document.
     """
-    return get_objects_operation(get_freecad_connection(), state.only_text_feedback, doc_name)
+    freecad = get_freecad_connection()
+    try:
+        res = freecad.get_objects(doc_name)
+        screenshot = freecad.get_active_screenshot()
+        if res["success"]:
+            response = [TextContent(type="text", text=json.dumps(res["data"]))]
+            return add_screenshot_if_available(response, screenshot)
+        else:
+            return [TextContent(type="text", text=f"Failed to get objects: {res['error']}")]
+    except Exception as e:
+        logger.error(f"Failed to get objects: {str(e)}")
+        return [TextContent(type="text", text=f"Failed to get objects: {str(e)}")]
 
 
 @mcp.tool()
@@ -361,19 +411,30 @@ def get_object(ctx: Context, doc_name: str, obj_name: str) -> list[TextContent |
     Returns:
         The object and a screenshot of the object.
     """
-    return get_object_operation(
-        get_freecad_connection(),
-        state.only_text_feedback,
-        doc_name,
-        obj_name,
-    )
+    freecad = get_freecad_connection()
+    try:
+        res = freecad.get_object(doc_name, obj_name)
+        screenshot = freecad.get_active_screenshot()
+        if res["success"]:
+            response = [TextContent(type="text", text=json.dumps(res["data"]))]
+            return add_screenshot_if_available(response, screenshot)
+        else:
+            return [TextContent(type="text", text=f"Failed to get object: {res['error']}")]
+    except Exception as e:
+        logger.error(f"Failed to get object: {str(e)}")
+        return [TextContent(type="text", text=f"Failed to get object: {str(e)}")]
 
 
 @mcp.tool()
 def get_parts_list(ctx: Context) -> list[TextContent]:
     """Get the list of parts in the parts library addon.
     """
-    return get_parts_list_operation(get_freecad_connection())
+    freecad = get_freecad_connection()
+    res = freecad.get_parts_list()
+    if res["success"] and res["data"]:
+        return [TextContent(type="text", text=json.dumps(res["data"]))]
+    else:
+        return [TextContent(type="text", text="No parts found in the parts library. You must add parts_library addon.")]
 
 
 @mcp.tool()
@@ -383,7 +444,9 @@ def list_documents(ctx: Context) -> list[TextContent]:
     Returns:
         A list of document names.
     """
-    return list_documents_operation(get_freecad_connection())
+    freecad = get_freecad_connection()
+    res = freecad.list_documents()
+    return [TextContent(type="text", text=json.dumps(res["data"]))]
 
 
 @mcp.tool()
@@ -434,13 +497,8 @@ def asset_creation_strategy() -> str:
 
 
 def _validate_host(value: str) -> str:
-    """Validate that *value* is a valid IP address or hostname.
-
-    Used as the ``type`` callback for the ``--host`` argparse argument.
-    Raises ``argparse.ArgumentTypeError`` on invalid input.
-    """
+    """Validate that *value* is a valid IP address or hostname."""
     import argparse
-
     import validators
 
     if validators.ipv4(value) or validators.ipv6(value) or validators.hostname(value):
