@@ -17,7 +17,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Topic :: Scientific/Engineering :: Computer Aided Design (CAD)",
+    "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
@@ -110,11 +110,11 @@ ignore_missing_imports = true
 
 [tool.pylint.messages_control]
 disable = [
-    "C0111",
-    "C0103",
-    "R0913",
-    "R0914",
-    "W0212",
+    "C0111",  # missing-docstring
+    "C0103",  # invalid-name
+    "R0913",  # too-many-arguments
+    "R0914",  # too-many-locals
+    "W0212",  # protected-access
 ]
 
 [tool.pylint.format]
