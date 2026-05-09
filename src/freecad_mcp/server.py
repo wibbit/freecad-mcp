@@ -523,6 +523,22 @@ def list_documents(ctx: Context) -> list[TextContent]:
 
 
 @mcp.tool()
+def get_freecad_status(ctx: Context) -> list[TextContent]:
+    """Get the current state of the FreeCAD session.
+
+    Returns the active document, open documents, active workbench, and active
+    PartDesign body. Call this at the start of a session to orient yourself,
+    or when a document/object operation fails unexpectedly.
+    """
+    freecad = get_freecad_connection()
+    res = freecad.get_status()
+    if res["success"]:
+        return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
+    else:
+        return [TextContent(type="text", text=f"Failed to get status: {res['error']}")]
+
+
+@mcp.tool()
 def run_fem_analysis(
     ctx: Context,
     doc_name: str,

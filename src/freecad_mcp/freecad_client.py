@@ -89,5 +89,8 @@ class FreeCADConnection:
     def list_documents(self) -> list[str]:
         return self.server.list_documents()
 
+    def get_status(self) -> dict[str, Any]:
+        return self.server.get_status()
+
     def run_fem_analysis(self, doc_name: str, analysis_name: str, timeout: int = 600) -> dict[str, Any]:
         return self.server.run_fem_analysis(doc_name, analysis_name, timeout)
