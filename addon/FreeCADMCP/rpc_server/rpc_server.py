@@ -74,9 +74,16 @@ _logger = logging.getLogger("freecad_mcp")
 
 
 def _setup_logging(settings):
+    # Remove any existing handlers so toggling via the GUI doesn't stack duplicates.
+    for h in list(_logger.handlers):
+        _logger.removeHandler(h)
+        h.close()
+
     if not settings.get("log_enabled", False):
+        _logger.setLevel(logging.NOTSET)
         return
-    log_path = settings.get("log_path", "") or os.path.join(
+
+    log_path = settings.get("log_path", "").strip() or os.path.join(
         FreeCAD.getUserAppDataDir(), "freecad_mcp.log"
     )
     handler = logging.FileHandler(log_path)
@@ -967,6 +974,34 @@ class StartupSettingsDialog(QtWidgets.QDialog):
         remote_layout.addWidget(self._remote_off)
         layout.addWidget(remote_group)
 
+        # --- Logging group ---
+        log_group = QtWidgets.QGroupBox("Logging")
+        log_layout = QtWidgets.QVBoxLayout(log_group)
+        log_layout.setSpacing(8)
+        log_layout.setContentsMargins(12, 12, 12, 12)
+
+        self._log_enabled = QtWidgets.QCheckBox("Write logs to file")
+        self._log_enabled.setChecked(settings.get("log_enabled", False))
+        log_layout.addWidget(self._log_enabled)
+
+        path_row = QtWidgets.QHBoxLayout()
+        self._log_path = QtWidgets.QLineEdit()
+        default_log = os.path.join(FreeCAD.getUserAppDataDir(), "freecad_mcp.log")
+        self._log_path.setPlaceholderText(default_log)
+        self._log_path.setText(settings.get("log_path", ""))
+        self._log_path.setEnabled(self._log_enabled.isChecked())
+        self._browse_btn = QtWidgets.QPushButton("Browse…")
+        self._browse_btn.setEnabled(self._log_enabled.isChecked())
+        self._browse_btn.clicked.connect(self._browse_log_path)
+        path_row.addWidget(self._log_path)
+        path_row.addWidget(self._browse_btn)
+        log_layout.addLayout(path_row)
+
+        self._log_enabled.toggled.connect(self._log_path.setEnabled)
+        self._log_enabled.toggled.connect(self._browse_btn.setEnabled)
+
+        layout.addWidget(log_group)
+
         # --- Buttons ---
         buttons = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Save | QtWidgets.QDialogButtonBox.Cancel
@@ -975,16 +1010,33 @@ class StartupSettingsDialog(QtWidgets.QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
+    def _browse_log_path(self):
+        current = self._log_path.text().strip() or os.path.join(
+            FreeCAD.getUserAppDataDir(), "freecad_mcp.log"
+        )
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Select Log File",
+            current,
+            "Log files (*.log);;All files (*)",
+        )
+        if path:
+            self._log_path.setText(path)
+
     def accept(self):
         settings = load_settings()
         settings["auto_start_server"] = self._server_on.isChecked()
         settings["startup_remote_enabled"] = self._remote_on.isChecked()
+        settings["log_enabled"] = self._log_enabled.isChecked()
+        settings["log_path"] = self._log_path.text().strip()
         save_settings(settings)
         _setup_logging(settings)
+        log_state = "enabled" if settings["log_enabled"] else "disabled"
         FreeCAD.Console.PrintMessage(
             f"Startup settings saved — server: "
             f"{'auto-start' if settings['auto_start_server'] else 'manual'}, "
-            f"remote: {'enabled' if settings['startup_remote_enabled'] else 'disabled'}\n"
+            f"remote: {'enabled' if settings['startup_remote_enabled'] else 'disabled'}, "
+            f"logging: {log_state}\n"
         )
         super().accept()
 
