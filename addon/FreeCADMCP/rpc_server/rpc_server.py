@@ -5,6 +5,7 @@ import ObjectsFem
 import contextlib
 import ipaddress
 import json
+import logging
 import queue
 import re
 import base64
@@ -12,6 +13,7 @@ import io
 import os
 import tempfile
 import threading
+import traceback
 from dataclasses import dataclass, field
 from typing import Any
 from xmlrpc.server import SimpleXMLRPCServer
@@ -34,6 +36,8 @@ _DEFAULT_SETTINGS = {
     "allowed_ips": "127.0.0.1",
     "auto_start_server": True,
     "startup_remote_enabled": False,
+    "log_enabled": False,
+    "log_path": "",
 }
 
 
@@ -64,6 +68,22 @@ def save_settings(settings):
             json.dump(settings, f, indent=2)
     except Exception as e:
         FreeCAD.Console.PrintError(f"Failed to save MCP settings: {e}\n")
+
+
+_logger = logging.getLogger("freecad_mcp")
+
+
+def _setup_logging(settings):
+    if not settings.get("log_enabled", False):
+        return
+    log_path = settings.get("log_path", "") or os.path.join(
+        FreeCAD.getUserAppDataDir(), "freecad_mcp.log"
+    )
+    handler = logging.FileHandler(log_path)
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
+    _logger.addHandler(handler)
+    _logger.setLevel(logging.DEBUG)
+    _logger.info("FreeCAD MCP addon logging started")
 
 
 # --- IP-filtered XML-RPC server ---
@@ -174,12 +194,20 @@ def _resolve_screenshot_size(
 
 
 def process_gui_tasks():
-    while not rpc_request_queue.empty():
-        task = rpc_request_queue.get()
-        res = task()
-        if res is not None:
-            rpc_response_queue.put(res)
-    QtCore.QTimer.singleShot(500, process_gui_tasks)
+    try:
+        while not rpc_request_queue.empty():
+            task = rpc_request_queue.get()
+            try:
+                res = task()
+                if res is not None:
+                    rpc_response_queue.put(res)
+            except Exception as e:
+                tb = traceback.format_exc()
+                _logger.error("GUI task raised an exception: %s\n%s", e, tb)
+                FreeCAD.Console.PrintError(f"MCP GUI task error: {e}\n{tb}")
+                rpc_response_queue.put(f"GUI task error: {e}")
+    finally:
+        QtCore.QTimer.singleShot(500, process_gui_tasks)
 
 
 @dataclass
@@ -333,42 +361,94 @@ class FreeCADRPC:
         return {"success": False, "error": str(res)}
 
     def execute_code(self, code: str) -> dict[str, Any]:
-        output_buffer = io.StringIO()
+        stdout_buf = io.StringIO()
+        stderr_buf = io.StringIO()
+
         def task():
             try:
-                with contextlib.redirect_stdout(output_buffer):
+                with contextlib.redirect_stdout(stdout_buf), contextlib.redirect_stderr(stderr_buf):
                     exec(code, globals())
                 FreeCAD.Console.PrintMessage("Python code executed successfully.\n")
                 return True
-            except Exception as e:
-                FreeCAD.Console.PrintError(
-                    f"Error executing Python code: {e}\n"
-                )
-                return f"Error executing Python code: {e}\n"
+            except Exception:
+                tb = traceback.format_exc()
+                FreeCAD.Console.PrintError(f"Error executing Python code:\n{tb}\n")
+                return tb
 
         rpc_request_queue.put(task)
         res = rpc_response_queue.get(timeout=self.TIMEOUT)
+        stdout = stdout_buf.getvalue()
+        stderr = stderr_buf.getvalue()
         if res is True:
-            return {"success": True, "data": {"output": output_buffer.getvalue()}, "error": None}
+            return {
+                "success": True,
+                "data": {"output": stdout, "stderr": stderr},
+                "error": None,
+            }
         else:
-            return {"success": False, "data": None, "error": res}
+            return {
+                "success": False,
+                "data": {"output": stdout, "stderr": stderr, "traceback": res},
+                "error": res.splitlines()[-1] if res else "Unknown error",
+            }
 
     def get_objects(self, doc_name):
         try:
             doc = FreeCAD.getDocument(doc_name)
         except NameError:
-            return {"success": False, "data": None, "error": f"Document '{doc_name}' not found"}
+            open_docs = list(FreeCAD.listDocuments().keys())
+            return {"success": False, "data": None, "error": f"Document '{doc_name}' not found. Open documents: {open_docs}"}
         return {"success": True, "data": [serialize_object(obj) for obj in doc.Objects], "error": None}
 
     def get_object(self, doc_name, obj_name):
         try:
             doc = FreeCAD.getDocument(doc_name)
         except NameError:
-            return {"success": False, "data": None, "error": f"Document '{doc_name}' not found"}
+            open_docs = list(FreeCAD.listDocuments().keys())
+            return {"success": False, "data": None, "error": f"Document '{doc_name}' not found. Open documents: {open_docs}"}
         obj = doc.getObject(obj_name)
         if not obj:
-            return {"success": False, "data": None, "error": f"Object '{obj_name}' not found in document '{doc_name}'"}
+            available = [o.Name for o in doc.Objects]
+            return {"success": False, "data": None, "error": f"Object '{obj_name}' not found in '{doc_name}'. Available: {available}"}
         return {"success": True, "data": serialize_object(obj), "error": None}
+
+    def get_status(self) -> dict:
+        try:
+            open_docs = list(FreeCAD.listDocuments().keys())
+            active_doc = None
+            active_workbench = None
+            active_body = None
+
+            if FreeCAD.ActiveDocument:
+                active_doc = FreeCAD.ActiveDocument.Name
+
+            try:
+                active_workbench = FreeCADGui.activeWorkbench().name()
+            except Exception:
+                pass
+
+            try:
+                import PartDesignGui
+                body = PartDesignGui.getBody(False)
+                if body:
+                    active_body = body.Name
+            except Exception:
+                pass
+
+            return {
+                "success": True,
+                "data": {
+                    "active_document": active_doc,
+                    "open_documents": open_docs,
+                    "active_workbench": active_workbench,
+                    "active_body": active_body,
+                    "rpc_port": 9875,
+                    "timer_chain": "running",
+                },
+                "error": None,
+            }
+        except Exception as e:
+            return {"success": False, "data": None, "error": str(e)}
 
     def insert_part_from_library(self, relative_path):
         rpc_request_queue.put(lambda: self._insert_part_from_library(relative_path))
@@ -510,19 +590,22 @@ class FreeCADRPC:
             except Exception as e:
                 return str(e)
         else:
+            open_docs = list(FreeCAD.listDocuments().keys())
             FreeCAD.Console.PrintError(f"Document '{doc_name}' not found.\n")
-            return f"Document '{doc_name}' not found.\n"
+            return f"Document '{doc_name}' not found. Open documents: {open_docs}"
 
     def _edit_object_gui(self, doc_name: str, obj: Object):
         doc = FreeCAD.getDocument(doc_name)
         if not doc:
+            open_docs = list(FreeCAD.listDocuments().keys())
             FreeCAD.Console.PrintError(f"Document '{doc_name}' not found.\n")
-            return f"Document '{doc_name}' not found.\n"
+            return f"Document '{doc_name}' not found. Open documents: {open_docs}"
 
         obj_ins = doc.getObject(obj.name)
         if not obj_ins:
+            available = [o.Name for o in doc.Objects]
             FreeCAD.Console.PrintError(f"Object '{obj.name}' not found in document '{doc_name}'.\n")
-            return f"Object '{obj.name}' not found in document '{doc_name}'.\n"
+            return f"Object '{obj.name}' not found in '{doc_name}'. Available: {available}"
 
         try:
             # For Fem::ConstraintFixed
@@ -628,8 +711,9 @@ class FreeCADRPC:
     def _delete_object_gui(self, doc_name: str, obj_name: str):
         doc = FreeCAD.getDocument(doc_name)
         if not doc:
+            open_docs = list(FreeCAD.listDocuments().keys())
             FreeCAD.Console.PrintError(f"Document '{doc_name}' not found.\n")
-            return f"Document '{doc_name}' not found.\n"
+            return f"Document '{doc_name}' not found. Open documents: {open_docs}"
 
         try:
             doc.removeObject(obj_name)
@@ -896,6 +980,7 @@ class StartupSettingsDialog(QtWidgets.QDialog):
         settings["auto_start_server"] = self._server_on.isChecked()
         settings["startup_remote_enabled"] = self._remote_on.isChecked()
         save_settings(settings)
+        _setup_logging(settings)
         FreeCAD.Console.PrintMessage(
             f"Startup settings saved — server: "
             f"{'auto-start' if settings['auto_start_server'] else 'manual'}, "
@@ -1059,14 +1144,32 @@ def _init_gui():
         settings["remote_enabled"] = settings.get("startup_remote_enabled", False)
         save_settings(settings)
 
+        server_started = False
         if settings.get("auto_start_server", True) and rpc_server_instance is None:
             msg = start_rpc_server()
             FreeCAD.Console.PrintMessage(msg + "\n")
+            server_started = rpc_server_instance is not None
+            if not server_started:
+                _logger.error("_init_gui: server failed to start: %s", msg)
 
         _update_server_action()
         _update_remote_action()
+
+        remote_enabled = settings.get("remote_enabled", False)
+        _logger.info(
+            "_init_gui completed: server_started=%s port=9875 remote_enabled=%s",
+            server_started,
+            remote_enabled,
+        )
+        _logger.info(
+            "_init_gui settings: auto_start_server=%s log_enabled=%s log_path=%r",
+            settings.get("auto_start_server"),
+            settings.get("log_enabled"),
+            settings.get("log_path"),
+        )
     except Exception:
         QtCore.QTimer.singleShot(2000, _init_gui)
 
 
+_setup_logging(load_settings())
 QtCore.QTimer.singleShot(2000, _init_gui)
