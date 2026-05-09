@@ -13,6 +13,7 @@ import io
 import os
 import tempfile
 import threading
+import time
 import traceback
 from dataclasses import dataclass, field
 from typing import Any
@@ -25,6 +26,27 @@ from .serialize import serialize_object
 
 rpc_server_thread = None
 rpc_server_instance = None
+
+
+_MAX_LOG_STR = 120
+
+
+def _truncate_params(params):
+    """Return a loggable, length-capped representation of RPC call params."""
+    def _trunc(v):
+        if isinstance(v, str):
+            if len(v) > _MAX_LOG_STR:
+                return f"{v[:_MAX_LOG_STR]}…[{len(v)} chars]"
+            return v
+        if isinstance(v, (list, tuple)):
+            truncated = [_trunc(x) for x in v[:6]]
+            if len(v) > 6:
+                truncated.append(f"…+{len(v) - 6} more")
+            return truncated
+        if isinstance(v, dict):
+            return {k: _trunc(vv) for k, vv in list(v.items())[:8]}
+        return v
+    return [_trunc(p) for p in params]
 
 
 # --- Settings persistence ---
@@ -101,6 +123,20 @@ class FilteredXMLRPCServer(SimpleXMLRPCServer):
     def __init__(self, addr, allowed_ips_str="127.0.0.1", **kwargs):
         self._allowed_networks = _parse_allowed_ips(allowed_ips_str)
         super().__init__(addr, **kwargs)
+
+    def _dispatch(self, method, params):
+        start = time.monotonic()
+        _logger.debug("RPC → %s %s", method, _truncate_params(params))
+        result = super()._dispatch(method, params)
+        elapsed = time.monotonic() - start
+        if isinstance(result, dict):
+            if result.get("error"):
+                _logger.warning("RPC ← %s FAIL (%.2fs): %s", method, elapsed, result["error"])
+            else:
+                _logger.debug("RPC ← %s OK (%.2fs)", method, elapsed)
+        else:
+            _logger.debug("RPC ← %s (%.2fs)", method, elapsed)
+        return result
 
     def verify_request(self, request, client_address):
         client_ip = client_address[0]
