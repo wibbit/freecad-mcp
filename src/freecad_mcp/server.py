@@ -63,7 +63,6 @@ from .assembly_tools.assembly4_manager import (
 from .assembly_tools.assembly_common import (
     list_assembly_parts as _list_assembly_parts,
     export_assembly as _export_assembly,
-    calculate_assembly_mass as _calculate_assembly_mass,
 )
 from .assembly_tools.assembly3_advanced import (
     list_assembly3_constraints as _list_assembly3_constraints,
@@ -125,7 +124,22 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[Dict[str, Any]]:
 
 mcp = FastMCP(
     "FreeCADMCP",
-    instructions="FreeCAD integration through the Model Context Protocol",
+    instructions=(
+        "FreeCAD parametric CAD modelling via MCP. FreeCAD must be running with the FreeCADMCP addon active.\n\n"
+        "Getting started:\n"
+        "1. Call get_freecad_status to confirm FreeCAD is running and see the active document.\n"
+        "2. Call list_documents to see open documents, or create_document to start a new one.\n"
+        "3. Read the relevant workflow prompt before any multi-step task: sketch_workflow (sketch-to-solid), boolean_operations_guide (combining/subtracting solids), assembly_guide (Assembly3 and Assembly4), asset_creation_strategy (general overview).\n\n"
+        "Tool groups:\n"
+        "- Document/object management: create_document, list_documents, get_objects, get_object, create_object, edit_object, delete_object, get_freecad_status\n"
+        "- Sketch workflow: create_datum_plane, create_sketch_on_plane, add_contour_to_sketch, extrude_sketch_bidirectional, attach_solid_to_plane\n"
+        "- Boolean operations: boolean_union, boolean_cut, boolean_intersection\n"
+        "- Advanced modeling: create_loft, create_revolve, create_sweep, create_spline_3d, add_fillet, add_chamfer, shell_object, mirror_object, circular_pattern, linear_pattern, create_reference_plane, create_reference_axis, import_airfoil_profile, import_dxf\n"
+        "- Assembly: create_assembly3, create_assembly4 and related tools\n"
+        "- FEM analysis: run_fem_analysis (requires setup via create_object — see docstring)\n"
+        "- Inspection/view: get_view, execute_code (escape hatch for operations not covered by dedicated tools)\n\n"
+        "All doc_name and obj_name values are case-sensitive and must exactly match FreeCAD's internal names. Call get_objects or get_freecad_status if you are unsure what names exist."
+    ),
     lifespan=server_lifespan,
 )
 
@@ -500,14 +514,20 @@ def get_object(ctx: Context, doc_name: str, obj_name: str) -> list[TextContent |
 
 @mcp.tool()
 def get_parts_list(ctx: Context) -> list[TextContent]:
-    """Get the list of parts in the parts library addon.
+    """List all available parts in the FreeCAD parts library addon.
+
+    Call this before insert_part_from_library to discover valid relative_path values.
+    Returns an informative message if the parts_library addon is not installed.
     """
     freecad = get_freecad_connection()
-    res = freecad.get_parts_list()
-    if res["success"] and res["data"]:
-        return [TextContent(type="text", text=json.dumps(res["data"]))]
-    else:
-        return [TextContent(type="text", text="No parts found in the parts library. You must add parts_library addon.")]
+    try:
+        res = freecad.get_parts_list()
+        if res.get("success") and res.get("data"):
+            return [TextContent(type="text", text=json.dumps(res["data"]))]
+        return [TextContent(type="text", text="No parts found. Install the FreeCAD parts_library addon to use this feature.")]
+    except Exception as e:
+        logger.error(f"Failed to get parts list: {e}")
+        return [TextContent(type="text", text=f"Failed to get parts list: {e}")]
 
 
 @mcp.tool()
@@ -515,11 +535,17 @@ def list_documents(ctx: Context) -> list[TextContent]:
     """Get the list of open documents in FreeCAD.
 
     Returns:
-        A list of document names.
+        A list of document names. Call this before any operation that requires a doc_name.
     """
     freecad = get_freecad_connection()
-    res = freecad.list_documents()
-    return [TextContent(type="text", text=json.dumps(res["data"]))]
+    try:
+        res = freecad.list_documents()
+        if res.get("success"):
+            return [TextContent(type="text", text=json.dumps(res["data"]))]
+        return [TextContent(type="text", text=f"Failed to list documents: {res.get('error')}")]
+    except Exception as e:
+        logger.error(f"Failed to list documents: {e}")
+        return [TextContent(type="text", text=f"Failed to list documents: {e}")]
 
 
 @mcp.tool()
@@ -581,11 +607,11 @@ def run_fem_analysis(
 
 
 @mcp.tool()
-def create_datum_plane_tool(
+def create_datum_plane(
     ctx: Context,
     doc_name: str,
     plane_name: str,
-    alignment: str = "xy",
+    alignment: Literal["xy", "xz", "yz"] = "xy",
     offset: float = 0.0,
 ) -> list[TextContent | ImageContent]:
     """Create a datum plane aligned with XY, XZ, or YZ coordinate system.
@@ -600,8 +626,8 @@ def create_datum_plane_tool(
         offset: Offset distance from origin (default: 0.0)
         
     Returns:
-        Confirmation message and screenshot
-        
+        Confirmation message and screenshot. See the `sketch_workflow` prompt for the full step-by-step guide before starting a sketch-based workflow.
+
     Example:
         {
             "doc_name": "MyDocument",
@@ -615,7 +641,7 @@ def create_datum_plane_tool(
 
 
 @mcp.tool()
-def create_sketch_on_plane_tool(
+def create_sketch_on_plane(
     ctx: Context,
     doc_name: str,
     plane_name: str,
@@ -645,7 +671,7 @@ def create_sketch_on_plane_tool(
 
 
 @mcp.tool()
-def add_contour_to_sketch_tool(
+def add_contour_to_sketch(
     ctx: Context,
     doc_name: str,
     sketch_name: str,
@@ -703,7 +729,7 @@ def add_contour_to_sketch_tool(
 
 
 @mcp.tool()
-def extrude_sketch_bidirectional_tool(
+def extrude_sketch_bidirectional(
     ctx: Context,
     doc_name: str,
     sketch_name: str,
@@ -742,7 +768,7 @@ def extrude_sketch_bidirectional_tool(
 
 
 @mcp.tool()
-def attach_solid_to_plane_tool(
+def attach_solid_to_plane(
     ctx: Context,
     doc_name: str,
     solid_body_name: str,
@@ -752,7 +778,7 @@ def attach_solid_to_plane_tool(
     offset_y: float = 0.0,
     offset_z: float = 0.0,
     rotation_angle: float = 0.0,
-    rotation_axis: str = "z",
+    rotation_axis: Literal["x", "y", "z"] = "z",
 ) -> list[TextContent | ImageContent]:
     """Attach (position) a solid body to align with another datum plane.
     
@@ -791,7 +817,7 @@ def attach_solid_to_plane_tool(
 
 
 @mcp.tool()
-def boolean_union_tool(
+def boolean_union(
     ctx: Context,
     doc_name: str,
     base_object_name: str,
@@ -819,13 +845,15 @@ def boolean_union_tool(
             "tool_object_names": ["side_plane_solid", "top_plane_solid"],
             "result_name": "assembled_part"
         }
+
+    See the `boolean_operations_guide` prompt for positioning strategy.
     """
     freecad = get_freecad_connection()
     return _boolean_union(ctx, freecad, add_screenshot_if_available, doc_name, base_object_name, tool_object_names, result_name)
 
 
 @mcp.tool()
-def boolean_cut_tool(
+def boolean_cut(
     ctx: Context,
     doc_name: str,
     base_object_name: str,
@@ -859,7 +887,7 @@ def boolean_cut_tool(
 
 
 @mcp.tool()
-def boolean_intersection_tool(
+def boolean_intersection(
     ctx: Context,
     doc_name: str,
     object1_name: str,
@@ -892,41 +920,9 @@ def boolean_intersection_tool(
     return _boolean_intersection(ctx, freecad, add_screenshot_if_available, doc_name, object1_name, object2_name, result_name)
 
 
-@mcp.tool()
-def boolean_common_tool(
-    ctx: Context,
-    doc_name: str,
-    object1_name: str,
-    object2_name: str,
-    result_name: str | None = None,
-) -> list[TextContent | ImageContent]:
-    """Alias of boolean_intersection_tool for FreeCAD terminology compatibility.
-    
-    Keep only the common volume between two solids.
-    
-    Args:
-        doc_name: Document name
-        object1_name: Name of the first object
-        object2_name: Name of the second object
-        result_name: Name for the result (default: object1_name + "_common")
-        
-    Returns:
-        Confirmation message and screenshot
-        
-    Example:
-        {
-            "doc_name": "MyDocument",
-            "object1_name": "sphere_solid",
-            "object2_name": "cube_solid",
-            "result_name": "common_shape"
-        }
-    """
-    freecad = get_freecad_connection()
-    return _boolean_common(ctx, freecad, add_screenshot_if_available, doc_name, object1_name, object2_name, result_name)
-
 
 @mcp.tool()
-def transform_object_tool(
+def transform_object(
     ctx: Context,
     doc_name: str,
     obj_name: str,
@@ -986,12 +982,12 @@ def transform_object_tool(
 
 
 @mcp.tool()
-def align_object_tool(
+def align_object(
     ctx: Context,
     doc_name: str,
     source_obj_name: str,
     target_obj_name: str,
-    align_type: str = "both",
+    align_type: Literal["position", "rotation", "both"] = "both",
     offset: dict[str, float] | None = None,
 ) -> list[TextContent | ImageContent]:
     """Align one object to another (position, rotation, or both).
@@ -1040,13 +1036,13 @@ def align_object_tool(
 
 
 @mcp.tool()
-def attach_to_face_tool(
+def attach_to_face(
     ctx: Context,
     doc_name: str,
     obj_name: str,
     target_obj_name: str,
     face_name: str,
-    map_mode: str = "FlatFace",
+    map_mode: Literal["FlatFace", "ObjectXY", "ObjectXZ", "ObjectYZ", "NormalToEdge"] = "FlatFace",
     offset: dict[str, float] | None = None,
 ) -> list[TextContent | ImageContent]:
     """Attach an object to a face of another object.
@@ -1097,22 +1093,24 @@ def attach_to_face_tool(
 
 
 @mcp.tool()
-def create_assembly3_tool(
+def create_assembly3(
     ctx: Context,
     doc_name: str,
     assembly_name: str = "Assembly",
 ) -> list[TextContent | ImageContent]:
     """Create a new Assembly3 object for constraint-based assembly.
-    
+
     Assembly3 uses automatic constraint solving for part positioning.
-    
+
     Args:
         doc_name: Document name
         assembly_name: Name for the assembly (default: "Assembly")
-        
+
     Returns:
         Confirmation message and screenshot
-        
+
+    See the `assembly_guide` prompt before starting — Assembly3 and Assembly4 use completely different approaches.
+
     Example:
         {
             "doc_name": "MyDoc",
@@ -1124,7 +1122,7 @@ def create_assembly3_tool(
 
 
 @mcp.tool()
-def add_part_to_assembly3_tool(
+def add_part_to_assembly3(
     ctx: Context,
     doc_name: str,
     assembly_name: str,
@@ -1165,11 +1163,11 @@ def add_part_to_assembly3_tool(
 
 
 @mcp.tool()
-def add_assembly3_constraint_tool(
+def add_assembly3_constraint(
     ctx: Context,
     doc_name: str,
     assembly_name: str,
-    constraint_type: str,
+    constraint_type: Literal["PlaneCoincident", "Axial", "PointsCoincident", "PointOnLine", "PointOnPlane", "SameOrientation", "MultiParallel", "Angle", "Distance", "Lock", "Perpendicular"],
     references: list[dict[str, str]],
     constraint_name: str | None = None,
     properties: dict[str, Any] | None = None,
@@ -1206,7 +1204,7 @@ def add_assembly3_constraint_tool(
 
 
 @mcp.tool()
-def solve_assembly3_tool(
+def solve_assembly3(
     ctx: Context,
     doc_name: str,
     assembly_name: str,
@@ -1231,22 +1229,24 @@ def solve_assembly3_tool(
 
 
 @mcp.tool()
-def create_assembly4_tool(
+def create_assembly4(
     ctx: Context,
     doc_name: str,
     assembly_name: str = "Assembly",
 ) -> list[TextContent | ImageContent]:
     """Create a new Assembly4 container for LCS-based assembly.
-    
+
     Assembly4 uses Local Coordinate Systems (LCS) for manual placement.
-    
+
     Args:
         doc_name: Document name
         assembly_name: Name for the assembly (default: "Assembly")
-        
+
     Returns:
         Confirmation message and screenshot
-        
+
+    See the `assembly_guide` prompt before starting — Assembly3 and Assembly4 use completely different approaches.
+
     Example:
         {
             "doc_name": "MyDoc",
@@ -1258,7 +1258,7 @@ def create_assembly4_tool(
 
 
 @mcp.tool()
-def create_lcs_assembly4_tool(
+def create_lcs_assembly4(
     ctx: Context,
     doc_name: str,
     parent_name: str,
@@ -1291,7 +1291,7 @@ def create_lcs_assembly4_tool(
 
 
 @mcp.tool()
-def insert_part_assembly4_tool(
+def insert_part_assembly4(
     ctx: Context,
     doc_name: str,
     assembly_name: str,
@@ -1330,13 +1330,13 @@ def insert_part_assembly4_tool(
 
 
 @mcp.tool()
-def attach_lcs_to_geometry_tool(
+def attach_lcs_to_geometry(
     ctx: Context,
     doc_name: str,
     lcs_name: str,
     target_object: str,
     element: str,
-    map_mode: str = "FlatFace",
+    map_mode: Literal["FlatFace", "ObjectXY", "ObjectXZ", "ObjectYZ", "NormalToEdge"] = "FlatFace",
 ) -> list[TextContent | ImageContent]:
     """Attach an LCS to a geometric element in Assembly4.
     
@@ -1364,11 +1364,11 @@ def attach_lcs_to_geometry_tool(
 
 
 @mcp.tool()
-def list_assembly_parts_tool(
+def list_assembly_parts(
     ctx: Context,
     doc_name: str,
     assembly_name: str,
-    assembly_type: str = "auto",
+    assembly_type: Literal["auto", "assembly3", "assembly4"] = "auto",
 ) -> list[TextContent | ImageContent]:
     """List all parts in an assembly (works with Assembly3 and Assembly4).
     
@@ -1392,12 +1392,12 @@ def list_assembly_parts_tool(
 
 
 @mcp.tool()
-def export_assembly_tool(
+def export_assembly(
     ctx: Context,
     doc_name: str,
     assembly_name: str,
     export_path: str,
-    export_format: str = "step",
+    export_format: Literal["step", "iges", "stl", "obj", "brep"] = "step",
 ) -> list[TextContent | ImageContent]:
     """Export an assembly to a file.
     
@@ -1424,35 +1424,11 @@ def export_assembly_tool(
     return _export_assembly(ctx, freecad, add_screenshot_if_available, doc_name, assembly_name, export_path, export_format)
 
 
-@mcp.tool()
-def calculate_assembly_mass_tool(
-    ctx: Context,
-    doc_name: str,
-    assembly_name: str,
-) -> list[TextContent | ImageContent]:
-    """Calculate total mass of assembly (requires material/density properties).
-    
-    Args:
-        doc_name: Document name
-        assembly_name: Assembly object name
-        
-    Returns:
-        Mass calculation details
-        
-    Example:
-        {
-            "doc_name": "MyDoc",
-            "assembly_name": "MainAssembly"
-        }
-    """
-    freecad = get_freecad_connection()
-    return _calculate_assembly_mass(ctx, freecad, add_screenshot_if_available, doc_name, assembly_name)
-
 
 # ==================== ASSEMBLY PHASE 2 - ADVANCED TOOLS (2025-10-08) ====================
 
 @mcp.tool()
-def list_assembly3_constraints_tool(
+def list_assembly3_constraints(
     ctx: Context,
     doc_name: str,
     assembly_name: str,
@@ -1479,7 +1455,7 @@ def list_assembly3_constraints_tool(
 
 
 @mcp.tool()
-def delete_assembly3_constraint_tool(
+def delete_assembly3_constraint(
     ctx: Context,
     doc_name: str,
     assembly_name: str,
@@ -1507,7 +1483,7 @@ def delete_assembly3_constraint_tool(
 
 
 @mcp.tool()
-def modify_assembly3_constraint_tool(
+def modify_assembly3_constraint(
     ctx: Context,
     doc_name: str,
     constraint_name: str,
@@ -1538,7 +1514,7 @@ def modify_assembly3_constraint_tool(
 
 
 @mcp.tool()
-def list_assembly4_lcs_tool(
+def list_assembly4_lcs(
     ctx: Context,
     doc_name: str,
     parent_name: str,
@@ -1565,7 +1541,7 @@ def list_assembly4_lcs_tool(
 
 
 @mcp.tool()
-def delete_lcs_assembly4_tool(
+def delete_lcs_assembly4(
     ctx: Context,
     doc_name: str,
     parent_name: str,
@@ -1593,7 +1569,7 @@ def delete_lcs_assembly4_tool(
 
 
 @mcp.tool()
-def modify_lcs_assembly4_tool(
+def modify_lcs_assembly4(
     ctx: Context,
     doc_name: str,
     lcs_name: str,
@@ -1631,45 +1607,45 @@ def modify_lcs_assembly4_tool(
 
 
 @mcp.tool()
-def generate_bom_tool(
+def generate_bom(
     ctx: Context,
     doc_name: str,
     assembly_name: str,
-    format: str = "json",
+    output_format: Literal["json", "csv", "markdown"] = "json",
 ) -> list[TextContent | ImageContent]:
     """Generate Bill of Materials (BOM) for an assembly.
-    
+
     Counts parts, calculates masses, generates formatted BOM.
-    
+
     Args:
         doc_name: Document name
         assembly_name: Assembly object name
-        format: Output format - "json", "csv", or "markdown"
-        
+        output_format: Output format - "json", "csv", or "markdown"
+
     Returns:
         Formatted BOM
-        
+
     Examples:
         # JSON format
         {
             "doc_name": "MyDoc",
             "assembly_name": "MainAssembly",
-            "format": "json"
+            "output_format": "json"
         }
-        
+
         # Markdown table
         {
             "doc_name": "MyDoc",
             "assembly_name": "MainAssembly",
-            "format": "markdown"
+            "output_format": "markdown"
         }
     """
     freecad = get_freecad_connection()
-    return _generate_bom(ctx, freecad, add_screenshot_if_available, doc_name, assembly_name, format)
+    return _generate_bom(ctx, freecad, add_screenshot_if_available, doc_name, assembly_name, output_format)
 
 
 @mcp.tool()
-def get_assembly_properties_tool(
+def get_assembly_properties(
     ctx: Context,
     doc_name: str,
     assembly_name: str,
@@ -1733,27 +1709,51 @@ def assembly_guide() -> str:
 # ==================== ADVANCED MODELING TOOLS ====================
 
 @mcp.tool()
-def create_loft_tool(ctx: Context, doc_name: str, sketch_names: list[str], result_name: str, solid: bool = True, ruled: bool = False) -> list[TextContent]:
+def create_loft(ctx: Context, doc_name: str, sketch_names: list[str], result_name: str, solid: bool = True, ruled: bool = False) -> list[TextContent]:
+    """Create a loft (swept solid) through two or more existing closed sketch profiles.
+
+    Prerequisite: all sketches in sketch_names must already exist in the document and be closed profiles. Use create_sketch_on_plane and add_contour_to_sketch to create each profile first. See the sketch_workflow prompt.
+    The order of sketch_names determines the loft direction (first profile to last).
+    solid=True (default) produces a closed solid; False produces an open shell.
+    ruled=True creates flat-ruled faces between sections; False (default) uses smooth B-spline interpolation.
+    """
     freecad = get_freecad_connection()
     return _create_loft(ctx, freecad, add_screenshot_if_available, doc_name, sketch_names, result_name, solid, ruled)
 
 @mcp.tool()
-def create_revolve_tool(ctx: Context, doc_name: str, sketch_name: str, axis: dict[str, dict[str, float]], angle: float = 360.0, result_name: str = None) -> list[TextContent]:
+def create_revolve(ctx: Context, doc_name: str, sketch_name: str, axis: dict[str, dict[str, float]], angle: float = 360.0, result_name: str | None = None) -> list[TextContent]:
+    """Revolve a closed 2D sketch profile around an axis to create a solid of revolution (e.g. cylinder, cone, vase).
+
+    Prerequisite: sketch_name must already exist and be a closed 2D profile. The sketch must not cross the axis of revolution.
+    axis format: {"point": {"x": 0, "y": 0, "z": 0}, "direction": {"x": 0, "y": 0, "z": 1}}
+    angle: degrees of rotation — 360 creates a full solid, less creates a partial arc solid.
+    """
     freecad = get_freecad_connection()
     return _create_revolve(ctx, freecad, add_screenshot_if_available, doc_name, sketch_name, axis, angle, result_name or f"{sketch_name}_revolve")
 
 @mcp.tool()
-def create_sweep_tool(ctx: Context, doc_name: str, profile_sketch: str, path_sketch: str, result_name: str) -> list[TextContent]:
+def create_sweep(ctx: Context, doc_name: str, profile_sketch: str, path_sketch: str, result_name: str) -> list[TextContent]:
+    """Sweep a 2D profile sketch along a path sketch to create a solid (e.g. pipe, tube, extruded curve).
+
+    Prerequisite: profile_sketch must be a closed 2D profile; path_sketch must be an open or closed wire/sketch defining the sweep direction.
+    The profile is placed at the start of the path and swept along it.
+    """
     freecad = get_freecad_connection()
     return _create_sweep(ctx, freecad, add_screenshot_if_available, doc_name, profile_sketch, path_sketch, result_name)
 
 @mcp.tool()
-def create_spline_3d_tool(ctx: Context, doc_name: str, points: list[dict[str, float]], spline_name: str, closed: bool = False) -> list[TextContent]:
+def create_spline_3d(ctx: Context, doc_name: str, points: list[dict[str, float]], spline_name: str, closed: bool = False) -> list[TextContent]:
+    """Create a 3D B-spline wire through a list of 3D control points.
+
+    This produces a Wire object, not a solid. To create a solid from a 3D spline, use it as the path in create_sweep with a profile sketch.
+    points: list of {"x": float, "y": float, "z": float}, minimum 2 points required.
+    closed: if True, the spline loops back to the first point.
+    """
     freecad = get_freecad_connection()
     return _create_spline_3d(ctx, freecad, add_screenshot_if_available, doc_name, points, spline_name, closed)
 
 @mcp.tool()
-def add_fillet_tool(ctx: Context, doc_name: str, object_name: str, edges: list[str], radius: float, result_name: str = None) -> list[TextContent | ImageContent]:
+def add_fillet(ctx: Context, doc_name: str, object_name: str, edges: list[str], radius: float, result_name: str | None = None) -> list[TextContent | ImageContent]:
     """Add fillet (rounded edges) to an object
     
     Args:
@@ -1779,7 +1779,7 @@ def add_fillet_tool(ctx: Context, doc_name: str, object_name: str, edges: list[s
     return _add_fillet(ctx, freecad, add_screenshot_if_available, doc_name, object_name, edges, radius, result_name)
 
 @mcp.tool()
-def add_chamfer_tool(ctx: Context, doc_name: str, object_name: str, edges: list[str], distance: float, result_name: str = None) -> list[TextContent | ImageContent]:
+def add_chamfer(ctx: Context, doc_name: str, object_name: str, edges: list[str], distance: float, result_name: str | None = None) -> list[TextContent | ImageContent]:
     """Add chamfer (beveled edges) to an object
     
     Args:
@@ -1805,7 +1805,7 @@ def add_chamfer_tool(ctx: Context, doc_name: str, object_name: str, edges: list[
     return _add_chamfer(ctx, freecad, add_screenshot_if_available, doc_name, object_name, edges, distance, result_name)
 
 @mcp.tool()
-def shell_object_tool(ctx: Context, doc_name: str, object_name: str, thickness: float, faces_to_remove: list[str] | None = None, result_name: str = None) -> list[TextContent | ImageContent]:
+def shell_object(ctx: Context, doc_name: str, object_name: str, thickness: float, faces_to_remove: list[str] | None = None, result_name: str | None = None) -> list[TextContent | ImageContent]:
     """Create hollow shell by removing faces and adding thickness
     
     Args:
@@ -1831,7 +1831,7 @@ def shell_object_tool(ctx: Context, doc_name: str, object_name: str, thickness: 
     return _shell_object(ctx, freecad, add_screenshot_if_available, doc_name, object_name, thickness, faces_to_remove, result_name)
 
 @mcp.tool()
-def mirror_object_tool(ctx: Context, doc_name: str, source_obj: str, mirror_plane: dict[str, Any], result_name: str = None, merge: bool = True) -> list[TextContent | ImageContent]:
+def mirror_object(ctx: Context, doc_name: str, source_obj: str, mirror_plane: dict[str, Any], result_name: str | None = None, merge: bool = True) -> list[TextContent | ImageContent]:
     """Mirror object across a plane
     
     Args:
@@ -1860,7 +1860,7 @@ def mirror_object_tool(ctx: Context, doc_name: str, source_obj: str, mirror_plan
     return _mirror_object(ctx, freecad, add_screenshot_if_available, doc_name, source_obj, mirror_plane, result_name, merge)
 
 @mcp.tool()
-def circular_pattern_tool(ctx: Context, doc_name: str, object_name: str, axis: dict[str, dict[str, float]], count: int, angle: float = 360.0, result_name: str = None) -> list[TextContent | ImageContent]:
+def circular_pattern(ctx: Context, doc_name: str, object_name: str, axis: dict[str, dict[str, float]], count: int, angle: float = 360.0, result_name: str | None = None) -> list[TextContent | ImageContent]:
     """Create circular pattern (polar array) of an object
     
     Args:
@@ -1891,7 +1891,7 @@ def circular_pattern_tool(ctx: Context, doc_name: str, object_name: str, axis: d
     return _circular_pattern(ctx, freecad, add_screenshot_if_available, doc_name, object_name, axis, count, angle, result_name)
 
 @mcp.tool()
-def linear_pattern_tool(ctx: Context, doc_name: str, object_name: str, direction: dict[str, float], spacing: float, count: int, result_name: str = None) -> list[TextContent | ImageContent]:
+def linear_pattern(ctx: Context, doc_name: str, object_name: str, direction: dict[str, float], spacing: float, count: int, result_name: str | None = None) -> list[TextContent | ImageContent]:
     """Create linear pattern (rectangular array) of an object
     
     Args:
@@ -1919,7 +1919,7 @@ def linear_pattern_tool(ctx: Context, doc_name: str, object_name: str, direction
     return _linear_pattern(ctx, freecad, add_screenshot_if_available, doc_name, object_name, direction, spacing, count, result_name)
 
 @mcp.tool()
-def create_reference_plane_tool(ctx: Context, doc_name: str, plane_name: str, definition: dict[str, Any]) -> list[TextContent | ImageContent]:
+def create_reference_plane(ctx: Context, doc_name: str, plane_name: str, definition: dict[str, Any]) -> list[TextContent | ImageContent]:
     """Create reference plane with various definition modes
     
     Args:
@@ -1956,7 +1956,7 @@ def create_reference_plane_tool(ctx: Context, doc_name: str, plane_name: str, de
     return _create_reference_plane(ctx, freecad, add_screenshot_if_available, doc_name, plane_name, definition)
 
 @mcp.tool()
-def create_reference_axis_tool(ctx: Context, doc_name: str, axis_name: str, point: dict[str, float], direction: dict[str, float]) -> list[TextContent | ImageContent]:
+def create_reference_axis(ctx: Context, doc_name: str, axis_name: str, point: dict[str, float], direction: dict[str, float]) -> list[TextContent | ImageContent]:
     """Create reference axis from point and direction
     
     Args:
@@ -1980,7 +1980,7 @@ def create_reference_axis_tool(ctx: Context, doc_name: str, axis_name: str, poin
     return _create_reference_axis(ctx, freecad, add_screenshot_if_available, doc_name, axis_name, point, direction)
 
 @mcp.tool()
-def import_airfoil_profile_tool(ctx: Context, doc_name: str, sketch_name: str, naca_code: str, chord_length: float, position: dict[str, float] | None = None) -> list[TextContent | ImageContent]:
+def import_airfoil_profile(ctx: Context, doc_name: str, sketch_name: str, naca_code: str, chord_length: float, position: dict[str, float] | None = None) -> list[TextContent | ImageContent]:
     """Import standard NACA airfoil profile into sketch
     
     Args:
@@ -2010,7 +2010,7 @@ def import_airfoil_profile_tool(ctx: Context, doc_name: str, sketch_name: str, n
     return _import_airfoil_profile(ctx, freecad, add_screenshot_if_available, doc_name, sketch_name, naca_code, chord_length, position)
 
 @mcp.tool()
-def import_dxf_tool(ctx: Context, doc_name: str, file_path: str, sketch_name: str, scale: float = 1.0) -> list[TextContent | ImageContent]:
+def import_dxf(ctx: Context, doc_name: str, file_path: str, sketch_name: str, scale: float = 1.0) -> list[TextContent | ImageContent]:
     """Import DXF file into a sketch
     
     Args:

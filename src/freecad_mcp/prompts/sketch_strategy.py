@@ -13,7 +13,7 @@ Always follow these steps in order for best results:
 WORKFLOW STEPS:
 
 1. CREATE DATUM PLANE
-   Use: create_datum_plane()
+   Use: create_datum_plane
    - Creates a reference plane aligned with XY, XZ, or YZ
    - Name the plane descriptively (e.g., "base_plane", "side_plane")
    - The plane serves as the foundation for sketching
@@ -28,7 +28,7 @@ WORKFLOW STEPS:
    }
 
 2. CREATE SKETCH ON PLANE
-   Use: create_sketch_on_plane()
+   Use: create_sketch_on_plane
    - Creates a sketch attached to the datum plane
    - Sketch is automatically named: {plane_name}_sketch
    - The sketch inherits the plane's coordinate system
@@ -42,7 +42,7 @@ WORKFLOW STEPS:
    This creates: "base_plane_sketch"
 
 3. ADD CONTOUR TO SKETCH
-   Use: add_contour_to_sketch()
+   Use: add_contour_to_sketch
    - Draw the 2D profile using geometric elements
    - Supported geometry:
      * Points
@@ -104,7 +104,7 @@ WORKFLOW STEPS:
    }
 
 4. EXTRUDE SKETCH BIDIRECTIONALLY
-   Use: extrude_sketch_bidirectional()
+   Use: extrude_sketch_bidirectional
    - Creates a 3D solid from the 2D sketch
    - Solid is automatically named: {plane_name}_solid
    - Can extrude in both directions (forward and backward)
@@ -122,7 +122,7 @@ WORKFLOW STEPS:
    This creates: "base_plane_solid"
 
 5. ATTACH SOLID TO ANOTHER PLANE (Optional, for assemblies)
-   Use: attach_solid_to_plane()
+   Use: attach_solid_to_plane
    - Position the solid by aligning its base plane with another datum plane
    - Can align origins for precise positioning
    - Apply offsets and rotations as needed

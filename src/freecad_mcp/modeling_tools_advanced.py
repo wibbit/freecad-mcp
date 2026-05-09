@@ -7,6 +7,8 @@ Phase 3-5: Fonctions avancées pour modélisation F4U Corsair
 from mcp.types import TextContent, ImageContent
 from mcp.server.fastmcp import Context
 
+from .responses import parse_execute_result
+
 
 # ==================== PHASE 3: CRITICAL FEATURES ====================
 
@@ -76,17 +78,10 @@ else:
     res = freecad_connection.execute_code(code)
     screenshot = freecad_connection.get_active_screenshot()
     
-    if res.get('success') and 'SUCCESS' in res.get('message', ''):
-        return add_screenshot_helper(
-            [TextContent(type='text', text=res['message'])], 
-            screenshot
-        )
-    else:
-        err = res.get('error') or res.get('message', 'Unknown error')
-        return add_screenshot_helper(
-            [TextContent(type='text', text=f'Failed to add fillet: {err}')], 
-            screenshot
-        )
+    ok, msg = parse_execute_result(res)
+    if ok:
+        return add_screenshot_helper([TextContent(type='text', text=msg)], screenshot)
+    return add_screenshot_helper([TextContent(type='text', text=f'Failed to add fillet: {msg}')], screenshot)
 
 
 def add_chamfer(ctx: Context, freecad_connection, add_screenshot_helper,
@@ -151,17 +146,10 @@ else:
     res = freecad_connection.execute_code(code)
     screenshot = freecad_connection.get_active_screenshot()
     
-    if res.get('success') and 'SUCCESS' in res.get('message', ''):
-        return add_screenshot_helper(
-            [TextContent(type='text', text=res['message'])], 
-            screenshot
-        )
-    else:
-        err = res.get('error') or res.get('message', 'Unknown error')
-        return add_screenshot_helper(
-            [TextContent(type='text', text=f'Failed to add chamfer: {err}')], 
-            screenshot
-        )
+    ok, msg = parse_execute_result(res)
+    if ok:
+        return add_screenshot_helper([TextContent(type='text', text=msg)], screenshot)
+    return add_screenshot_helper([TextContent(type='text', text=f'Failed to add chamfer: {msg}')], screenshot)
 
 
 def shell_object(ctx: Context, freecad_connection, add_screenshot_helper,
@@ -242,17 +230,10 @@ else:
     res = freecad_connection.execute_code(code)
     screenshot = freecad_connection.get_active_screenshot()
     
-    if res.get('success') and 'SUCCESS' in res.get('message', ''):
-        return add_screenshot_helper(
-            [TextContent(type='text', text=res['message'])], 
-            screenshot
-        )
-    else:
-        err = res.get('error') or res.get('message', 'Unknown error')
-        return add_screenshot_helper(
-            [TextContent(type='text', text=f'Failed to create shell: {err}')], 
-            screenshot
-        )
+    ok, msg = parse_execute_result(res)
+    if ok:
+        return add_screenshot_helper([TextContent(type='text', text=msg)], screenshot)
+    return add_screenshot_helper([TextContent(type='text', text=f'Failed to create shell: {msg}')], screenshot)
 
 
 def mirror_object(ctx: Context, freecad_connection, add_screenshot_helper,
@@ -326,17 +307,10 @@ else:
     res = freecad_connection.execute_code(code)
     screenshot = freecad_connection.get_active_screenshot()
     
-    if res.get('success') and 'SUCCESS' in res.get('message', ''):
-        return add_screenshot_helper(
-            [TextContent(type='text', text=res['message'])], 
-            screenshot
-        )
-    else:
-        err = res.get('error') or res.get('message', 'Unknown error')
-        return add_screenshot_helper(
-            [TextContent(type='text', text=f'Failed to mirror: {err}')], 
-            screenshot
-        )
+    ok, msg = parse_execute_result(res)
+    if ok:
+        return add_screenshot_helper([TextContent(type='text', text=msg)], screenshot)
+    return add_screenshot_helper([TextContent(type='text', text=f'Failed to mirror: {msg}')], screenshot)
 
 
 def circular_pattern(ctx: Context, freecad_connection, add_screenshot_helper,
@@ -437,17 +411,10 @@ else:
     res = freecad_connection.execute_code(code)
     screenshot = freecad_connection.get_active_screenshot()
     
-    if res.get('success') and 'SUCCESS' in res.get('message', ''):
-        return add_screenshot_helper(
-            [TextContent(type='text', text=res['message'])], 
-            screenshot
-        )
-    else:
-        err = res.get('error') or res.get('message', 'Unknown error')
-        return add_screenshot_helper(
-            [TextContent(type='text', text=f'Failed to create circular pattern: {err}')], 
-            screenshot
-        )
+    ok, msg = parse_execute_result(res)
+    if ok:
+        return add_screenshot_helper([TextContent(type='text', text=msg)], screenshot)
+    return add_screenshot_helper([TextContent(type='text', text=f'Failed to create circular pattern: {msg}')], screenshot)
 
 
 def linear_pattern(ctx: Context, freecad_connection, add_screenshot_helper,
@@ -530,17 +497,10 @@ else:
     res = freecad_connection.execute_code(code)
     screenshot = freecad_connection.get_active_screenshot()
     
-    if res.get('success') and 'SUCCESS' in res.get('message', ''):
-        return add_screenshot_helper(
-            [TextContent(type='text', text=res['message'])], 
-            screenshot
-        )
-    else:
-        err = res.get('error') or res.get('message', 'Unknown error')
-        return add_screenshot_helper(
-            [TextContent(type='text', text=f'Failed to create linear pattern: {err}')], 
-            screenshot
-        )
+    ok, msg = parse_execute_result(res)
+    if ok:
+        return add_screenshot_helper([TextContent(type='text', text=msg)], screenshot)
+    return add_screenshot_helper([TextContent(type='text', text=f'Failed to create linear pattern: {msg}')], screenshot)
 
 
 # ==================== PHASE 4-5: ADVANCED FEATURES ====================
@@ -672,17 +632,10 @@ except Exception as e:
     res = freecad_connection.execute_code(code)
     screenshot = freecad_connection.get_active_screenshot()
     
-    if res.get('success') and 'SUCCESS' in res.get('message', ''):
-        return add_screenshot_helper(
-            [TextContent(type='text', text=res['message'])], 
-            screenshot
-        )
-    else:
-        err = res.get('error') or res.get('message', 'Unknown error')
-        return add_screenshot_helper(
-            [TextContent(type='text', text=f'Failed to create reference plane: {err}')], 
-            screenshot
-        )
+    ok, msg = parse_execute_result(res)
+    if ok:
+        return add_screenshot_helper([TextContent(type='text', text=msg)], screenshot)
+    return add_screenshot_helper([TextContent(type='text', text=f'Failed to create reference plane: {msg}')], screenshot)
 
 
 def create_reference_axis(ctx: Context, freecad_connection, add_screenshot_helper,
@@ -731,17 +684,10 @@ except Exception as e:
     res = freecad_connection.execute_code(code)
     screenshot = freecad_connection.get_active_screenshot()
     
-    if res.get('success') and 'SUCCESS' in res.get('message', ''):
-        return add_screenshot_helper(
-            [TextContent(type='text', text=res['message'])], 
-            screenshot
-        )
-    else:
-        err = res.get('error') or res.get('message', 'Unknown error')
-        return add_screenshot_helper(
-            [TextContent(type='text', text=f'Failed to create reference axis: {err}')], 
-            screenshot
-        )
+    ok, msg = parse_execute_result(res)
+    if ok:
+        return add_screenshot_helper([TextContent(type='text', text=msg)], screenshot)
+    return add_screenshot_helper([TextContent(type='text', text=f'Failed to create reference axis: {msg}')], screenshot)
 
 
 def import_airfoil_profile(ctx: Context, freecad_connection, add_screenshot_helper,
@@ -853,17 +799,10 @@ except Exception as e:
     res = freecad_connection.execute_code(code)
     screenshot = freecad_connection.get_active_screenshot()
     
-    if res.get('success') and 'SUCCESS' in res.get('message', ''):
-        return add_screenshot_helper(
-            [TextContent(type='text', text=res['message'])], 
-            screenshot
-        )
-    else:
-        err = res.get('error') or res.get('message', 'Unknown error')
-        return add_screenshot_helper(
-            [TextContent(type='text', text=f'Failed to import airfoil: {err}')], 
-            screenshot
-        )
+    ok, msg = parse_execute_result(res)
+    if ok:
+        return add_screenshot_helper([TextContent(type='text', text=msg)], screenshot)
+    return add_screenshot_helper([TextContent(type='text', text=f'Failed to import airfoil: {msg}')], screenshot)
 
 
 def import_dxf(ctx: Context, freecad_connection, add_screenshot_helper,
@@ -910,17 +849,10 @@ except Exception as e:
     res = freecad_connection.execute_code(code)
     screenshot = freecad_connection.get_active_screenshot()
     
-    if res.get('success') and 'SUCCESS' in res.get('message', ''):
-        return add_screenshot_helper(
-            [TextContent(type='text', text=res['message'])], 
-            screenshot
-        )
-    else:
-        err = res.get('error') or res.get('message', 'Unknown error')
-        return add_screenshot_helper(
-            [TextContent(type='text', text=f'Failed to import DXF: {err}')], 
-            screenshot
-        )
+    ok, msg = parse_execute_result(res)
+    if ok:
+        return add_screenshot_helper([TextContent(type='text', text=msg)], screenshot)
+    return add_screenshot_helper([TextContent(type='text', text=f'Failed to import DXF: {msg}')], screenshot)
 
 
 

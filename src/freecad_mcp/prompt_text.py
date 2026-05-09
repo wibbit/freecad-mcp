@@ -1,28 +1,38 @@
 ASSET_CREATION_STRATEGY = """
 Asset Creation Strategy for FreeCAD MCP
 
-When creating content in FreeCAD, always follow these steps:
+Before starting any task:
+1. Call get_freecad_status to confirm FreeCAD is running and identify the active document.
+2. Call list_documents or get_objects to understand the current state.
 
-0. Before starting any task, always use get_objects() to confirm the current state of the document.
+Choosing the right creation method:
 
-1. Utilize the parts library:
-   - Check available parts using get_parts_list().
-   - If the required part exists in the library, use insert_part_from_library() to insert it into your document.
+A. Parts library (fastest — use first)
+   - Call get_parts_list to see available parts.
+   - If the part exists, use insert_part_from_library.
 
-2. If the appropriate asset is not available in the parts library:
-   - Create basic shapes (e.g., cubes, cylinders, spheres) using create_object().
-   - Adjust and define detailed properties of the shapes as necessary using edit_object().
+B. Sketch-based workflow (preferred for precision solids)
+   - Read the sketch_workflow prompt before starting.
+   - Sequence: create_datum_plane → create_sketch_on_plane → add_contour_to_sketch → extrude_sketch_bidirectional
+   - Combine results with boolean_union, boolean_cut, or boolean_intersection.
+   - Refine with add_fillet, add_chamfer, or shell_object.
 
-3. Always assign clear and descriptive names to objects when adding them to the document.
+C. Advanced shapes
+   - Swept/revolved solids: create_loft, create_revolve, create_sweep
+   - Patterns: circular_pattern, linear_pattern, mirror_object
+   - Reference geometry: create_reference_plane, create_reference_axis
 
-4. Explicitly set the position, scale, and rotation properties of created or inserted objects using edit_object() to ensure proper spatial relationships.
+D. Part primitives (for simple shapes or FEM setup)
+   - Use create_object with types like Part::Box, Part::Cylinder, Part::Sphere.
+   - Adjust properties with edit_object. Verify with get_object.
 
-5. After editing an object, always verify that the set properties have been correctly applied by using get_object().
+E. Assemblies
+   - Read the assembly_guide prompt before starting.
+   - Use Assembly3 (constraint-based) or Assembly4 (LCS-based) tools.
 
-6. If detailed customization or specialized operations are necessary, use execute_code() to run custom Python scripts.
+F. execute_code — escape hatch only
+   - Use only for operations not covered by any dedicated tool above.
+   - Prefer dedicated tools wherever they exist.
 
-Only revert to basic creation methods in the following cases:
-- When the required asset is not available in the parts library.
-- When a basic shape is explicitly requested.
-- When creating complex shapes requires custom scripting.
+Always use clear, descriptive names for documents and objects. All names are case-sensitive.
 """
