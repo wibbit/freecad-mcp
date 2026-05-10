@@ -93,6 +93,49 @@ print("SUCCESS: circle created")
 
 ---
 
+## `NameError: name 'App' is not defined` in `execute_code`
+
+**Tool**: Any tool that uses `execute_code` internally, or manual `execute_code` calls  
+**Cause**: The exec sandbox previously only exposed `FreeCAD` and `FreeCADGui` as names. Standard FreeCAD scripting idioms use `App` and `Gui` as shorthand aliases, and code using those names raised `NameError`.  
+**Fix**: `App` and `Gui` are now pre-injected into the sandbox alongside `FreeCAD`/`FreeCADGui`. If you still see this error, you are running an old version of the FreeCAD addon (`rpc_server.py`). Pull the latest addon code and restart FreeCAD.  
+**Log to check**: FreeCAD addon log — look for `NameError` inside the `execute_code` entry.
+
+---
+
+## `Part::Fillet / Chamfer / Loft: Link(s) go out of allowed scope`
+
+**Tools**: `add_fillet`, `add_chamfer`, `create_loft`  
+**Symptom**: Error like `Part::Fillet: Link(s) to object(s) 'Pad' go out of the allowed scope 'MyBody'`  
+**Cause**: `Part::Fillet`, `Part::Chamfer`, and `Part::Loft` are document-level objects and cannot reference objects that live inside a `PartDesign::Body`. FreeCAD's scope rules forbid the cross-boundary reference.  
+**Fix**: Use `PartDesign::Fillet`, `PartDesign::Chamfer`, or `PartDesign::AdditiveLoft` instead, created via `body.newObject()`. The MCP tools `add_fillet`, `add_chamfer`, and `create_loft` detect Body context and switch automatically. If you see this error, ensure the source object is correctly inside the Body (`get_objects` → check the Body's Group list).  
+**Log to check**: FreeCAD's main log (`/home/dfurlong/freecad_mcp.log`) — the scope error appears in the FreeCAD console, not in the MCP response.
+
+---
+
+## `'PartDesign.Feature' has no attribute 'Edges'` (fillet/chamfer)
+
+**Tools**: `add_fillet`, `add_chamfer`  
+**Cause**: `PropertyLinkSub` (the `Base` property of `PartDesign::Fillet`) requires the subname collection to be a **tuple**, not a list. Passing `(obj, ["Edge1", "Edge2"])` causes FreeCAD to try to iterate the list as though it were a single object and fails with a confusing attribute error.  
+**Fix**: Pass `(obj, tuple(edge_names))`. The MCP tools handle this correctly. If using `execute_code` manually:  
+```python
+fillet.Base = (solid_obj, ("Edge1", "Edge2"))   # tuple, not list
+```
+
+---
+
+## Sketch created on datum plane but has wrong orientation / no profile
+
+**Tools**: `create_sketch_on_plane`, `create_sketch_in_body`  
+**Cause**: `AttachmentSupport = [(plane, '')]` was accepted by older FreeCAD but silently broken in FreeCAD 1.x — the sketch exists but does not properly inherit the plane's coordinate system.  
+**Fix**: Use `'Face1'` as the subname: `AttachmentSupport = [(plane, 'Face1')]`. Both MCP sketch creation tools use this form. If you created a sketch manually via `execute_code` with an empty subname, re-attach it:  
+```python
+sketch.AttachmentSupport = [(datum_plane, 'Face1')]
+sketch.MapMode = 'FlatFace'
+doc.recompute()
+```
+
+---
+
 ## How to Read the Addon Log Efficiently
 
 The FreeCAD addon log (`/home/dfurlong/freecad_mcp.log`) is the most useful debugging tool. Key patterns to `grep` for:

@@ -5,6 +5,44 @@ All notable changes to FreeCAD MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-05-10
+
+### ✨ Added
+
+- **`groove`** — PartDesign::Groove (subtractive revolve). Axis choices: `H_Axis`, `V_Axis`, `X_Axis`, `Y_Axis`, `Z_Axis`. Configurable angle (default 360°). Result name defaults to `{sketch_name}_groove`.
+- **`rename_object`** — Change the display label of any document object (FreeCAD's internal Name is immutable; this sets `obj.Label`).
+- **`close_document`** — Close a document by name, with optional save-before-close.
+- **`import_step`** — Import STEP or STL files into an open document via `Part.insert` / `Mesh.insert`. Assigns a label to the first imported object.
+- **`add_techdraw_dimension`** — Add a dimension annotation to a TechDraw view. Supports `DistanceX`, `DistanceY`, `Distance`, `Radius`, `Diameter`, `Angle` types. Requires an existing page and view.
+- **`pocket_sketch`** — PartDesign::Pocket (new dedicated tool, was previously absent). Supports fixed depth, two-sided, through-all, and symmetric modes.
+- **`add_datum_plane_to_body`** — Add a `PartDesign::Plane` to an existing Body at a specified alignment and offset.
+- **`create_sketch_in_body`** — Create a sketch inside an existing Body on a named datum plane.
+
+### 🔧 Enhanced
+
+- **`extrude_sketch_bidirectional`** — Added `taper_angle`, `taper_angle2` (draft angle), and `reversed` parameters. All FreeCAD 1.0 string enum `pad.Type` values (`"Length"`, `"TwoSides"`) used throughout.
+- **`add_fillet`** / **`add_chamfer`** — Now detect PartDesign Body context and automatically use `PartDesign::Fillet` / `PartDesign::Chamfer` (via `body.newObject()`) instead of `Part::Fillet` / `Part::Chamfer`. Fixes scope errors when the source object is inside a Body.
+- **`create_loft`** — Now detects PartDesign Body context and uses `PartDesign::AdditiveLoft` instead of `Part::Loft`. Fixes scope errors in Body workflows.
+- **`get_objects`** / **`get_object`** — Response now includes `State` (e.g. `["Up-to-date"]`, `["Invalid"]`) and `HasError` (boolean) for every object, surfacing the exclamation-mark error indicator visible in FreeCAD's model tree.
+
+### 🐛 Fixed
+
+- **`execute_code` sandbox** — `App` and `Gui` are now pre-injected as aliases for `FreeCAD` and `FreeCADGui`. Standard FreeCAD scripting idioms using `App.getDocument()` etc. previously raised `NameError`.
+- **`create_sketch_on_plane`** / **`create_sketch_in_body`** — `AttachmentSupport` now uses `'Face1'` subname instead of `''`. Empty subname was silently broken in FreeCAD 1.x, causing sketches to not properly inherit the datum plane's coordinate system.
+- **`pocket_sketch`** — `pocket.Type` now uses string enums (`"Dimension"`, `"ThroughAll"`, `"TwoSides"`) instead of integers. Integer values were a FreeCAD 0.x-ism; FreeCAD 1.x silently ignored them.
+- **`extrude_sketch_bidirectional`** — `pad.Type` now uses string enums (same fix as pocket).
+- **`create_datum_plane`** — Plane now created via `body.newObject()` instead of `doc.addObject()`. The old approach did not properly add the plane to the Body's feature tree.
+- **`serialize_shape`** — Now handles invalid/unrecomputed shapes that raise on `.Volume` or `.Area` access. Returns `{"BoundBox": ..., "invalid": True}` instead of crashing `get_objects`.
+
+### 📚 Documentation
+
+- `docs/api_gotchas.md` — Updated `PartDesign::Pad Type values` from integer to string enum table; added four new gotchas: PartDesign Body scoping, `PropertyLinkSub` tuple requirement, `AttachmentSupport 'Face1'` subname, and `Pocket.Type` string enums.
+- `docs/errors_and_workarounds.md` — Added four new error entries: `NameError: name 'App'`, scope errors for fillet/chamfer/loft in Body, `'PartDesign.Feature' has no attribute 'Edges'`, and sketch orientation silent failure.
+- `tests/test_plans/sketch_workflow.md` — Added test cases for all new sketch tools and parameters.
+- `tests/INTEGRATION_TEST_PLAN.md` — Added bugs 11–16 to Known Bugs table.
+
+---
+
 ## [3.0.0] - 2025-10-09 - Corsair Edition
 
 ### 🎊 Major Release: Complete CAD Workflow

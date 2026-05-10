@@ -55,6 +55,12 @@ Each area has its own focused test plan. Start here to find the right document.
 | 8 | `create_document`, `create_object`, `edit_object`, `delete_object`, `execute_code`, `insert_part_from_library` | `isError=True` on success | Success path raised `Exception("... successfully")` instead of returning TextContent | Fixed — retested ✅ 2026-05-10 |
 | 9 | `Part::Tube` via `create_object` | "not a document object type" | `Part::Tube` does not exist; use `create_tube` tool instead | By design — use dedicated `create_tube` tool |
 | 10 | `add_assembly3_constraint` | `No module named 'asm3'` | Assembly3 workbench not installed in this environment | Environment — install Assembly3 addon |
+| 11 | `execute_code` (any) | `NameError: name 'App' is not defined` | Exec sandbox only exposed `FreeCAD`/`FreeCADGui`; `App`/`Gui` aliases not injected | Fixed 2026-05-10 — `App` and `Gui` now pre-injected in `rpc_server.py` sandbox |
+| 12 | `add_fillet`, `add_chamfer` | `Part::Fillet: Link(s) go out of allowed scope 'Body'` | `Part::Fillet`/`Part::Chamfer` cannot reference objects inside a `PartDesign::Body` | Fixed 2026-05-10 — tools auto-detect Body context, use `PartDesign::Fillet`/`Chamfer` |
+| 13 | `add_fillet`, `add_chamfer` | `'PartDesign.Feature' has no attribute 'Edges'` | `PropertyLinkSub` requires tuple for subname collection, not list | Fixed 2026-05-10 — `fillet.Base = (obj, tuple(edge_names))` |
+| 14 | `create_loft` | `Part::Loft: Link(s) go out of allowed scope` | Same Body scoping issue as fillet/chamfer | Fixed 2026-05-10 — auto-detects Body, uses `PartDesign::AdditiveLoft` |
+| 15 | `create_sketch_on_plane`, `create_sketch_in_body` | Sketch created but has wrong orientation or profile ignored | `AttachmentSupport` with empty `''` subname silently broken in FreeCAD 1.x | Fixed 2026-05-10 — uses `'Face1'` subname |
+| 16 | `pocket_sketch`, `extrude_sketch_bidirectional` | Silent no-op or wrong extrude type | Integer `pad.Type` / `pocket.Type` values ignored in FreeCAD 1.x | Fixed 2026-05-10 — string enums (`"Length"`, `"ThroughAll"`, `"TwoSides"`) used throughout |
 
 ---
 

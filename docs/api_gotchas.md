@@ -96,15 +96,56 @@ print("SUCCESS: Draft circle created")
 
 ---
 
-## PartDesign::Pad Type values
+## PartDesign::Pad and Pocket Type values (FreeCAD 1.x)
 
-When setting `pad.Type` in `execute_code`:
-- `0` = Length (one direction, uses `pad.Length`)
-- `1` = Through all
-- `3` = Two lengths (uses `pad.Length` forward, `pad.Length2` backward)
-- `4` = Symmetric (uses `pad.Length` total, equal both directions)
+FreeCAD 1.x uses **string enum values** for `pad.Type` and `pocket.Type`. Integer values silently do nothing or cause a silent no-op.
 
-Type `1` ("Through all") is not the same as bidirectional. For bidirectional extrusion with explicit lengths, use Type `3`.
+| String value | Meaning |
+|---|---|
+| `"Length"` | One direction, uses `pad.Length` |
+| `"ThroughAll"` | Ignore length, cut/extrude to end of model |
+| `"TwoSides"` | Both directions: `pad.Length` forward, `pad.Length2` backward |
+| `"Symmetric"` | Equal both sides using `pad.Length` as total |
+
+For bidirectional extrusion with explicit lengths, use `pad.Type = "TwoSides"`. For a symmetric pad, use `pad.Midplane = True` with `pad.Type = "Length"` (the `extrude_sketch_bidirectional` tool does this automatically).
+
+---
+
+## PartDesign Body scoping: fillet, chamfer, loft inside a Body
+
+`Part::Fillet`, `Part::Chamfer`, and `Part::Loft` **cannot reference objects that live inside a `PartDesign::Body`**. Attempting to do so raises a scope error like:
+
+```
+Part::Fillet: Link(s) to object(s) 'Pad' go out of the allowed scope 'Body'
+```
+
+Use the PartDesign equivalents instead when the source object is inside a Body:
+
+| Part:: type | PartDesign:: equivalent |
+|---|---|
+| `Part::Fillet` | `PartDesign::Fillet` |
+| `Part::Chamfer` | `PartDesign::Chamfer` |
+| `Part::Loft` | `PartDesign::AdditiveLoft` |
+
+The `add_fillet`, `add_chamfer`, and `create_loft` MCP tools detect Body context automatically and switch to the correct type.
+
+---
+
+## PartDesign::Fillet / Chamfer Base: tuple, not list
+
+**Wrong**: `fillet.Base = (obj, ["Edge1", "Edge2"])` — raises `AttributeError: 'list' object has no attribute 'Name'`  
+**Right**: `fillet.Base = (obj, tuple(["Edge1", "Edge2"]))`
+
+`PropertyLinkSub` expects the subname collection to be a `tuple` of strings, not a `list`. The error message is misleading — it appears to come from the wrong place but is caused by this type mismatch.
+
+---
+
+## Sketch AttachmentSupport: use 'Face1' subname, not ''
+
+**Wrong**: `sketch.AttachmentSupport = [(datum_plane, '')]` — sketch attaches but has no proper face reference; silently broken in FreeCAD 1.x  
+**Right**: `sketch.AttachmentSupport = [(datum_plane, 'Face1')]`
+
+For `PartDesign::Plane` objects, the correct subname for `AttachmentSupport` is `'Face1'`. An empty string was accepted in earlier FreeCAD versions but causes the sketch to not properly adopt the plane's coordinate system in FreeCAD 1.x.
 
 ---
 
