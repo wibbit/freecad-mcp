@@ -21,13 +21,15 @@ Identified 2026-05-10. Check off as implemented and tested.
   and any feature added to an existing solid without an intermediate datum plane.
   Call `get_shape_topology` first to get valid face names.
 
-- [ ] **Taper angle on `extrude_sketch_bidirectional`**
+- [x] **Taper angle on `extrude_sketch_bidirectional`** — implemented 2026-05-10
   PartDesign::Pad supports a draft/taper angle parameter. Needed for tapered inserts,
   moulded parts, etc. (e.g. `-1.5°` draft on a 30mm deep insert body).
+  New params: `taper_angle` (forward), `taper_angle2` (backward), both default 0.0.
 
-- [ ] **Reversed direction on `extrude_sketch_bidirectional`**
+- [x] **Reversed direction on `extrude_sketch_bidirectional`** — implemented 2026-05-10
   Pad below the sketch plane (negative direction) without relying on the bidirectional
-  `length_backward` workaround. Should map to PartDesign::Pad `Reversed = True`.
+  `length_backward` workaround. Maps to PartDesign::Pad `Reversed = True`.
+  New param: `reversed` (bool, default False).
 
 ---
 

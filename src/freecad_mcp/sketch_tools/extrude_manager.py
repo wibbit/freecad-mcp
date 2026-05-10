@@ -16,12 +16,15 @@ def extrude_sketch_bidirectional(
     length_forward: float,
     length_backward: float = 0.0,
     use_midplane: bool = False,
+    taper_angle: float = 0.0,
+    taper_angle2: float = 0.0,
+    reversed: bool = False,
 ) -> list[TextContent | ImageContent]:
     """Extrude a sketch bidirectionally to create a solid.
-    
+
     The solid will be automatically named based on the sketch name,
     replacing '_sketch' with '_solid'.
-    
+
     Args:
         ctx: MCP context
         freecad_connection: FreeCAD connection instance
@@ -31,7 +34,10 @@ def extrude_sketch_bidirectional(
         length_forward: Extrusion length in the forward direction (normal to sketch)
         length_backward: Extrusion length in the backward direction (default 0.0)
         use_midplane: If True, extrude symmetrically (length_forward is total, ignoring length_backward)
-        
+        taper_angle: Draft/taper angle in degrees for the forward direction (default 0.0, positive = outward)
+        taper_angle2: Draft/taper angle in degrees for the backward direction (default 0.0)
+        reversed: If True, extrude in the opposite direction to the sketch normal
+
     Returns:
         List of text/image content with result
     """
@@ -40,9 +46,9 @@ def extrude_sketch_bidirectional(
             solid_name = sketch_name.replace("_sketch", "_solid")
         else:
             solid_name = f"{sketch_name}_solid"
-        
+
         total_length = length_forward + length_backward
-        
+
         code = f"""
 import FreeCAD as App
 import PartDesign
@@ -66,8 +72,7 @@ else:
         else:
             pad = body.newObject('PartDesign::Pad', '{solid_name}')
             pad.Profile = (sketch, [''])
-            pad.Length = {length_forward}
-            
+
             if {use_midplane}:
                 pad.Midplane = True
                 pad.Length = {total_length}
@@ -78,14 +83,19 @@ else:
             else:
                 pad.Type = 0
                 pad.Length = {length_forward}
-            
+
             pad.ReferenceAxis = (sketch, ['N_Axis'])
+            pad.Reversed = {reversed}
+            if hasattr(pad, 'TaperAngle'):
+                pad.TaperAngle = {taper_angle}
+            if hasattr(pad, 'TaperAngle2'):
+                pad.TaperAngle2 = {taper_angle2}
             sketch.ViewObject.Visibility = False
-            
+
             doc.recompute()
-            print(f"SUCCESS: Solid '{{pad.Name}}' created by extruding '{sketch_name}' (forward: {length_forward}, backward: {length_backward})")
+            print(f"SUCCESS: Solid '{{pad.Name}}' created by extruding '{sketch_name}' (forward: {length_forward}, backward: {length_backward}, taper: {taper_angle}°, reversed: {reversed})")
 """
-        
+
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
 
@@ -94,7 +104,7 @@ else:
             response = [
                 TextContent(
                     type="text",
-                    text=f"Solid '{solid_name}' created successfully (forward: {length_forward}mm, backward: {length_backward}mm)"
+                    text=f"Solid '{solid_name}' created successfully (forward: {length_forward}mm, backward: {length_backward}mm, taper: {taper_angle}°, reversed: {reversed})"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -106,7 +116,7 @@ else:
                 )
             ]
             return add_screenshot_helper(response, screenshot)
-            
+
     except Exception as e:
         logger.error(f"Failed to extrude sketch: {str(e)}")
         return [

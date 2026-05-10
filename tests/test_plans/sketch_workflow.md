@@ -85,8 +85,8 @@ Once the constraints bug is resolved, test each geometry type individually:
 ---
 
 ## 4. `extrude_sketch_bidirectional`
-- **Signature**: `extrude_sketch_bidirectional(doc_name, sketch_name, length_forward, length_backward, use_midplane)`
-- **Known**: ✅ Working — `getParentGroup()` fallback body search fixed 2026-05-10
+- **Signature**: `extrude_sketch_bidirectional(doc_name, sketch_name, length_forward, length_backward, use_midplane, taper_angle, taper_angle2, reversed)`
+- **Known**: ✅ Working — `getParentGroup()` fallback body search fixed 2026-05-10; taper + reversed added 2026-05-10
 - **Creates**: PartDesign::Pad named `{sketch_name}_solid`
 
 ### Extrude modes
@@ -96,6 +96,9 @@ Once the constraints bug is resolved, test each geometry type individually:
 | Forward only | `length_forward=25, length_backward=0` | ✅ Tested 2026-05-10 |
 | Bidirectional | `length_forward=20, length_backward=10` — verify total depth 30 | ⏳ Untested |
 | Midplane | `use_midplane=True, length_forward=30` — verify symmetric | ⏳ Untested |
+| Taper forward | `length_forward=25, taper_angle=-1.5` — verify draft angle on side faces | ⏳ Untested |
+| Taper bidirectional | `length_forward=20, length_backward=10, taper_angle=-1.5, taper_angle2=-1.5` | ⏳ Untested |
+| Reversed | `length_forward=25, reversed=True` — verify pad extrudes below sketch plane | ⏳ Untested |
 
 ---
 

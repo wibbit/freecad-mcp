@@ -1318,35 +1318,44 @@ def extrude_sketch_bidirectional(
     length_forward: float,
     length_backward: float = 0.0,
     use_midplane: bool = False,
+    taper_angle: float = 0.0,
+    taper_angle2: float = 0.0,
+    reversed: bool = False,
 ) -> list[TextContent | ImageContent]:
     """Extrude a sketch bidirectionally to create a 3D solid.
-    
+
     The solid is automatically named by replacing '_sketch' with '_solid' in the sketch name.
-    Can extrude in both directions (forward and backward) from the sketch plane.
-    
+    Can extrude in both directions (forward and backward) from the sketch plane, with optional
+    draft taper angle and direction reversal.
+
     Args:
         doc_name: Document name
         sketch_name: Sketch name to extrude
         length_forward: Extrusion length in the forward direction (normal to sketch)
         length_backward: Extrusion length in the backward direction (default: 0.0)
-        use_midplane: If True, extrude symmetrically (default: False)
-        
+        use_midplane: If True, extrude symmetrically (length_forward is total; default: False)
+        taper_angle: Draft/taper angle in degrees for the forward direction (default: 0.0, positive = outward)
+        taper_angle2: Draft/taper angle in degrees for the backward direction (default: 0.0)
+        reversed: If True, extrude in the direction opposite the sketch normal (default: False)
+
     Returns:
         Confirmation message and screenshot
-        
+
     Example:
         {
             "doc_name": "MyDocument",
             "sketch_name": "base_plane_sketch",
             "length_forward": 50.0,
             "length_backward": 25.0,
-            "use_midplane": false
+            "use_midplane": false,
+            "taper_angle": -1.5,
+            "reversed": false
         }
-        
+
         This creates: "base_plane_solid"
     """
     freecad = get_freecad_connection()
-    return _extrude_sketch_bidirectional(ctx, freecad, add_screenshot_if_available, doc_name, sketch_name, length_forward, length_backward, use_midplane)
+    return _extrude_sketch_bidirectional(ctx, freecad, add_screenshot_if_available, doc_name, sketch_name, length_forward, length_backward, use_midplane, taper_angle, taper_angle2, reversed)
 
 
 @mcp.tool()
