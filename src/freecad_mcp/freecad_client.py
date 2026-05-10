@@ -92,5 +92,41 @@ class FreeCADConnection:
     def get_status(self) -> dict[str, Any]:
         return self.server.get_status()
 
+    def get_shape_topology(self, doc_name: str, obj_name: str) -> dict:
+        return self.server.get_shape_topology(doc_name, obj_name)
+
+    def save_document(self, doc_name: str, path: str = "") -> dict:
+        return self.server.save_document(doc_name, path)
+
+    def load_document(self, path: str) -> dict:
+        return self.server.load_document(path)
+
+    def measure_object(self, doc_name: str, obj_name: str) -> dict:
+        return self.server.measure_object(doc_name, obj_name)
+
+    def set_object_visibility(self, doc_name: str, obj_name: str, visible: bool) -> dict:
+        return self.server.set_object_visibility(doc_name, obj_name, visible)
+
+    def undo(self, doc_name: str, steps: int = 1) -> dict:
+        return self.server.undo(doc_name, steps)
+
+    def export_object(self, doc_name: str, obj_name: str, path: str, export_format: str) -> dict:
+        return self.server.export_object(doc_name, obj_name, path, export_format)
+
+    def spreadsheet_read(self, doc_name: str, sheet_name: str, cell_range: str) -> dict:
+        return self.server.spreadsheet_read(doc_name, sheet_name, cell_range)
+
+    def spreadsheet_write(self, doc_name: str, sheet_name: str, cell: str, value) -> dict:
+        return self.server.spreadsheet_write(doc_name, sheet_name, cell, value)
+
+    def copy_object(self, doc_name: str, obj_name: str, new_name: str) -> dict:
+        return self.server.copy_object(doc_name, obj_name, new_name)
+
+    def create_techdraw_page(self, doc_name: str, page_name: str, template_path: str = "") -> dict:
+        return self.server.create_techdraw_page(doc_name, page_name, template_path)
+
+    def add_view_to_techdraw_page(self, doc_name: str, page_name: str, obj_name: str, view_name: str, x: float = 100.0, y: float = 100.0, scale: float = 1.0) -> dict:
+        return self.server.add_view_to_techdraw_page(doc_name, page_name, obj_name, view_name, x, y, scale)
+
     def run_fem_analysis(self, doc_name: str, analysis_name: str, timeout: int = 600) -> dict[str, Any]:
         return self.server.run_fem_analysis(doc_name, analysis_name, timeout)

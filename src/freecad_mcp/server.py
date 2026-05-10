@@ -41,7 +41,6 @@ from .sketch_tools.boolean_operations import (
     boolean_union as _boolean_union,
     boolean_cut as _boolean_cut,
     boolean_intersection as _boolean_intersection,
-    boolean_common as _boolean_common,
 )
 from .sketch_tools.transform_manager import (
     transform_object as _transform_object,
@@ -81,6 +80,9 @@ from .assembly_tools.bom_manager import (
 from .prompts.sketch_strategy import sketch_workflow_strategy
 from .prompts.boolean_strategy import boolean_operations_strategy
 from .prompts.assembly_strategy import assembly_strategy
+from .prompts.primitives_strategy import part_primitives_strategy
+from .prompts.fem_strategy import fem_workflow_strategy
+from .prompts.session_startup import session_startup_guide
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -130,7 +132,7 @@ def _log_tool(func):
             return result
         except Exception as e:
             logger.error("tool ← %s FAIL (%.2fs): %s", func.__name__, time.monotonic() - t, e)
-            raise
+            return [TextContent(type="text", text=f"Error calling {func.__name__}: {e}")]
 
     return wrapper
 
@@ -177,7 +179,7 @@ mcp = FastMCP(
         "Getting started:\n"
         "1. Call get_freecad_status to confirm FreeCAD is running and see the active document.\n"
         "2. Call list_documents to see open documents, or create_document to start a new one.\n"
-        "3. Read the relevant workflow prompt before any multi-step task: sketch_workflow (sketch-to-solid), boolean_operations_guide (combining/subtracting solids), assembly_guide (Assembly3 and Assembly4), asset_creation_strategy (general overview).\n\n"
+        "3. Read the relevant workflow prompt before any multi-step task: session_startup_guide_prompt (session checklist), sketch_workflow (sketch-to-solid), boolean_operations_guide (combining/subtracting solids), assembly_guide (Assembly3 and Assembly4), part_primitives_guide (Part primitives and boolean ops), fem_workflow (FEM stress analysis), asset_creation_strategy (general overview).\n\n"
         "Tool groups:\n"
         "- Document/object management: create_document, list_documents, get_objects, get_object, create_object, edit_object, delete_object, get_freecad_status\n"
         "- Sketch workflow: create_datum_plane, create_sketch_on_plane, add_contour_to_sketch, extrude_sketch_bidirectional, attach_solid_to_plane\n"
@@ -193,15 +195,26 @@ mcp = FastMCP(
 
 
 def get_freecad_connection() -> FreeCADConnection:
-    """Get or create a persistent FreeCAD connection"""
+    """Get or create a persistent FreeCAD connection, reconnecting if stale."""
+    if state.freecad_connection is not None:
+        try:
+            state.freecad_connection.ping()
+        except Exception:
+            logger.warning("FreeCAD connection is stale, reconnecting...")
+            state.freecad_connection = None
+
     if state.freecad_connection is None:
         state.freecad_connection = FreeCADConnection(host=state.rpc_host, port=9875)
-        if not state.freecad_connection.ping():
-            logger.error("Failed to ping FreeCAD")
+        try:
+            if not state.freecad_connection.ping():
+                raise Exception("Ping returned false")
+        except Exception as e:
+            logger.error("Failed to connect to FreeCAD: %s", e)
             state.freecad_connection = None
             raise Exception(
                 "Failed to connect to FreeCAD. Make sure the FreeCAD addon is running."
-            )
+            ) from e
+
     return state.freecad_connection
 
 
@@ -244,7 +257,7 @@ def create_object(
     obj_type: str,
     obj_name: str,
     analysis_name: str | None = None,
-    obj_properties: dict[str, Any] = None,
+    obj_properties: dict[str, Any] | None = None,
 ) -> list[TextContent | ImageContent]:
     """Create a new object in FreeCAD.
     Object type is starts with "Part::" or "Draft::" or "PartDesign::" or "Fem::".
@@ -622,6 +635,379 @@ def get_freecad_status(ctx: Context) -> list[TextContent]:
         return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
     else:
         return [TextContent(type="text", text=f"Failed to get status: {res['error']}")]
+
+
+@mcp.tool()
+@_log_tool
+def get_shape_topology(
+    ctx: Context,
+    doc_name: str,
+    obj_name: str,
+) -> list[TextContent]:
+    """Return the topological summary of an object's shape: faces, edges, and vertices.
+
+    Use this to inspect a solid's geometry for downstream operations such as
+    selecting faces for boolean cuts, identifying edge counts for fillets, or
+    verifying that an extrusion produced the expected number of faces.
+
+    Returns a JSON object with:
+    - faces: list of {index, area, normal, centroid}
+    - edges: list of {index, length, curve_type}
+    - vertices: list of {index, x, y, z}
+
+    Args:
+        doc_name: Name of the FreeCAD document.
+        obj_name: Name of the object whose shape to inspect.
+    """
+    try:
+        freecad = get_freecad_connection()
+        res = freecad.get_shape_topology(doc_name, obj_name)
+        if res["success"]:
+            return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
+        else:
+            return [TextContent(type="text", text=f"Failed to get shape topology: {res['error']}")]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Failed to get shape topology: {e}")]
+
+
+@mcp.tool()
+@_log_tool
+def save_document(
+    ctx: Context,
+    doc_name: str,
+    path: str = "",
+) -> list[TextContent]:
+    """Save the FreeCAD document to disk.
+
+    If `path` is provided, saves to that absolute file path (saveAs). If omitted,
+    saves to the document's current file path. Fails if no path is set and the
+    document has never been saved.
+
+    Args:
+        doc_name: Name of the FreeCAD document to save.
+        path: Absolute file path to save to (optional). If empty, saves in place.
+    """
+    try:
+        freecad = get_freecad_connection()
+        res = freecad.save_document(doc_name, path)
+        if res["success"]:
+            return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
+        else:
+            return [TextContent(type="text", text=f"Failed to save document: {res['error']}")]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Failed to save document: {e}")]
+
+
+@mcp.tool()
+@_log_tool
+def load_document(
+    ctx: Context,
+    path: str,
+) -> list[TextContent]:
+    """Open a FreeCAD document from disk and return the resulting document name.
+
+    The document is opened in FreeCAD's GUI and becomes available for subsequent
+    tool calls using the returned document name.
+
+    Args:
+        path: Absolute file path to the .FCStd file to open.
+    """
+    try:
+        freecad = get_freecad_connection()
+        res = freecad.load_document(path)
+        if res["success"]:
+            return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
+        else:
+            return [TextContent(type="text", text=f"Failed to load document: {res['error']}")]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Failed to load document: {e}")]
+
+
+@mcp.tool()
+@_log_tool
+def measure_object(
+    ctx: Context,
+    doc_name: str,
+    obj_name: str,
+) -> list[TextContent]:
+    """Return physical measurements for a solid object.
+
+    Useful for validating dimensions after modelling, checking mass properties
+    for FEM setup, or confirming bounding box extents before assembly placement.
+
+    Returns a JSON object with:
+    - bounding_box: {min_x, max_x, size_x, min_y, max_y, size_y, min_z, max_z, size_z} in mm
+    - volume: in mm³
+    - surface_area: in mm²
+    - center_of_mass: {x, y, z} in mm
+
+    Args:
+        doc_name: Name of the FreeCAD document.
+        obj_name: Name of the solid object to measure.
+    """
+    try:
+        freecad = get_freecad_connection()
+        res = freecad.measure_object(doc_name, obj_name)
+        if res["success"]:
+            return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
+        else:
+            return [TextContent(type="text", text=f"Failed to measure object: {res['error']}")]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Failed to measure object: {e}")]
+
+
+@mcp.tool()
+@_log_tool
+def set_object_visibility(
+    ctx: Context,
+    doc_name: str,
+    obj_name: str,
+    visible: bool,
+) -> list[TextContent]:
+    """Show or hide an object in the FreeCAD 3D view.
+
+    Use this to toggle visibility of objects without deleting them, useful for
+    managing complex assemblies or revealing hidden geometry.
+
+    Args:
+        doc_name: Name of the FreeCAD document.
+        obj_name: Name of the object to show or hide.
+        visible: True to show the object, False to hide it.
+    """
+    try:
+        freecad = get_freecad_connection()
+        res = freecad.set_object_visibility(doc_name, obj_name, visible)
+        if res["success"]:
+            return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
+        else:
+            return [TextContent(type="text", text=f"Failed to set object visibility: {res['error']}")]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Failed to set object visibility: {e}")]
+
+
+@mcp.tool()
+@_log_tool
+def undo(
+    ctx: Context,
+    doc_name: str,
+    steps: int = 1,
+) -> list[TextContent]:
+    """Undo the last N operations on a FreeCAD document.
+
+    Use this to revert recent changes when a modeling operation produced
+    an undesired result. Each call undoes the specified number of steps.
+
+    Args:
+        doc_name: Name of the FreeCAD document.
+        steps: Number of undo steps to perform (default 1).
+    """
+    try:
+        freecad = get_freecad_connection()
+        res = freecad.undo(doc_name, steps)
+        if res["success"]:
+            return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
+        else:
+            return [TextContent(type="text", text=f"Failed to undo: {res['error']}")]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Failed to undo: {e}")]
+
+
+@mcp.tool()
+@_log_tool
+def export_object(
+    ctx: Context,
+    doc_name: str,
+    obj_name: str,
+    path: str,
+    export_format: Literal["step", "stl", "obj", "iges"],
+) -> list[TextContent]:
+    """Export a single FreeCAD object to a file.
+
+    Writes the object geometry to the specified path in the chosen format.
+    STEP and IGES preserve full B-Rep topology; STL and OBJ produce triangle meshes.
+
+    Args:
+        doc_name: Name of the FreeCAD document.
+        obj_name: Name of the object to export.
+        path: Absolute file path to write (e.g. "/tmp/part.step").
+        export_format: File format — one of "step", "stl", "obj", "iges".
+    """
+    try:
+        freecad = get_freecad_connection()
+        res = freecad.export_object(doc_name, obj_name, path, export_format)
+        if res["success"]:
+            return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
+        else:
+            return [TextContent(type="text", text=f"Failed to export object: {res['error']}")]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Failed to export object: {e}")]
+
+
+@mcp.tool()
+@_log_tool
+def spreadsheet_read(
+    ctx: Context,
+    doc_name: str,
+    sheet_name: str,
+    cell_range: str,
+) -> list[TextContent]:
+    """Read one or more cells from a FreeCAD Spreadsheet object.
+
+    Returns a dict mapping cell addresses to their values (string, float, or int).
+    Use a single address like "A1" or a range like "A1:C3".
+
+    Args:
+        doc_name: Name of the FreeCAD document.
+        sheet_name: Name of the Spreadsheet object in the document.
+        cell_range: Cell address ("A1") or range ("A1:C3") to read.
+    """
+    try:
+        freecad = get_freecad_connection()
+        res = freecad.spreadsheet_read(doc_name, sheet_name, cell_range)
+        if res["success"]:
+            return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
+        else:
+            return [TextContent(type="text", text=f"Failed to read spreadsheet: {res['error']}")]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Failed to read spreadsheet: {e}")]
+
+
+@mcp.tool()
+@_log_tool
+def spreadsheet_write(
+    ctx: Context,
+    doc_name: str,
+    sheet_name: str,
+    cell: str,
+    value: str,
+) -> list[TextContent]:
+    """Write a value to a single cell in a FreeCAD Spreadsheet object.
+
+    Sets the cell content and recomputes the sheet so any dependent
+    expressions and linked model parameters are updated immediately.
+
+    Args:
+        doc_name: Name of the FreeCAD document.
+        sheet_name: Name of the Spreadsheet object in the document.
+        cell: Cell address to write (e.g. "B2").
+        value: Value to write; formulas start with "=" (e.g. "=A1+10").
+    """
+    try:
+        freecad = get_freecad_connection()
+        res = freecad.spreadsheet_write(doc_name, sheet_name, cell, value)
+        if res["success"]:
+            return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
+        else:
+            return [TextContent(type="text", text=f"Failed to write spreadsheet: {res['error']}")]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Failed to write spreadsheet: {e}")]
+
+
+@mcp.tool()
+@_log_tool
+def copy_object(
+    ctx: Context,
+    doc_name: str,
+    obj_name: str,
+    new_name: str,
+) -> list[TextContent]:
+    """Duplicate an object within the same FreeCAD document under a new label.
+
+    Creates an independent copy of the named object and assigns it the given
+    label. Returns the copy's internal Name (auto-assigned by FreeCAD) along
+    with the requested label. Note that ``new_name`` sets the human-readable
+    Label, not the internal Name used in expressions and object lookups.
+    Dependencies are copied recursively so the copy is self-contained. The
+    returned ``copy`` key is the internal FreeCAD object name (auto-generated);
+    ``label`` is the human-readable name you provided.
+
+    Args:
+        doc_name: Name of the FreeCAD document containing the object.
+        obj_name: Internal name of the object to duplicate.
+        new_name: Label to assign to the newly created copy.
+    """
+    try:
+        freecad = get_freecad_connection()
+        res = freecad.copy_object(doc_name, obj_name, new_name)
+        if res["success"]:
+            return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
+        else:
+            return [TextContent(type="text", text=f"Failed to copy object: {res['error']}")]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Failed to copy object: {e}")]
+
+
+@mcp.tool()
+@_log_tool
+def create_techdraw_page(
+    ctx: Context,
+    doc_name: str,
+    page_name: str,
+    template_path: str = "",
+) -> list[TextContent]:
+    """Create a TechDraw engineering drawing sheet in a FreeCAD document.
+
+    Adds a new TechDraw::DrawPage object to the document, optionally loading
+    an SVG border/title-block template. Once the page exists, use
+    ``add_view_to_techdraw_page`` to place projected views of 3D objects on
+    it.
+
+    Args:
+        doc_name: Name of the FreeCAD document.
+        page_name: Name to assign to the new TechDraw page object.
+        template_path: Absolute path to an SVG template file for the sheet
+            border and title block. Leave empty to create a blank sheet.
+            Note: blank pages (no template) require FreeCAD 1.0 or later;
+            FreeCAD 0.21 and earlier require a template file to render correctly.
+    """
+    try:
+        freecad = get_freecad_connection()
+        res = freecad.create_techdraw_page(doc_name, page_name, template_path)
+        if res["success"]:
+            return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
+        else:
+            return [TextContent(type="text", text=f"Failed to create TechDraw page: {res['error']}")]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Failed to create TechDraw page: {e}")]
+
+
+@mcp.tool()
+@_log_tool
+def add_view_to_techdraw_page(
+    ctx: Context,
+    doc_name: str,
+    page_name: str,
+    obj_name: str,
+    view_name: str,
+    x: float = 100.0,
+    y: float = 100.0,
+    scale: float = 1.0,
+) -> list[TextContent]:
+    """Add a projected view of a 3D object onto an existing TechDraw page.
+
+    Creates a TechDraw::DrawViewPart that projects the named 3D object onto
+    the specified drawing page. Call ``create_techdraw_page`` first to ensure
+    the page exists. Position the view with ``x``/``y`` page coordinates
+    (in mm from the page origin) and control its size with ``scale``.
+
+    Args:
+        doc_name: Name of the FreeCAD document.
+        page_name: Internal name of the TechDraw page to add the view to.
+        obj_name: Internal name of the 3D object to project.
+        view_name: Name to assign to the new DrawViewPart object.
+        x: Horizontal position of the view on the page in mm.
+        y: Vertical position of the view on the page in mm.
+        scale: Scale ratio for the view (e.g. 0.5 for half size, 2.0 for double).
+    """
+    try:
+        freecad = get_freecad_connection()
+        res = freecad.add_view_to_techdraw_page(doc_name, page_name, obj_name, view_name, x, y, scale)
+        if res["success"]:
+            return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
+        else:
+            return [TextContent(type="text", text=f"Failed to add view to TechDraw page: {res['error']}")]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Failed to add view to TechDraw page: {e}")]
 
 
 @mcp.tool()
@@ -1794,6 +2180,24 @@ def boolean_operations_guide() -> str:
 def assembly_guide() -> str:
     """Strategic guide for Assembly3 and Assembly4 (2025-10-08)"""
     return assembly_strategy()
+
+
+@mcp.prompt()
+def part_primitives_guide() -> str:
+    """Guide for creating geometry with Part primitives and boolean operations"""
+    return part_primitives_strategy()
+
+
+@mcp.prompt()
+def fem_workflow() -> str:
+    """Step-by-step guide for FEM stress analysis setup and execution"""
+    return fem_workflow_strategy()
+
+
+@mcp.prompt()
+def session_startup_guide_prompt() -> str:
+    """Session startup checklist: status check, document setup, workflow selection"""
+    return session_startup_guide()
 
 
 # ==================== ADVANCED MODELING TOOLS ====================
