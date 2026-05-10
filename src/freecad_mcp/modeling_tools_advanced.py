@@ -60,7 +60,7 @@ else:
 
         if body:
             fillet = body.newObject('PartDesign::Fillet', '{res_name}')
-            fillet.Base = (obj, edge_names)
+            fillet.Base = (obj, tuple(edge_names))
             fillet.Radius = {radius}
         else:
             fillet = doc.addObject('Part::Fillet', '{res_name}')
@@ -135,7 +135,7 @@ else:
 
         if body:
             chamfer = body.newObject('PartDesign::Chamfer', '{res_name}')
-            chamfer.Base = (obj, edge_names)
+            chamfer.Base = (obj, tuple(edge_names))
             chamfer.Size = {distance}
         else:
             chamfer = doc.addObject('Part::Chamfer', '{res_name}')
