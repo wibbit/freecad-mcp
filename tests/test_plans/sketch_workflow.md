@@ -4,7 +4,8 @@ Datum plane creation, sketch attachment, contour building, and extrusion.
 Last updated: 2026-05-10
 
 The full workflow is sequential and must be executed in order:
-`create_datum_plane` → `create_sketch_on_plane` → `add_contour_to_sketch` → `extrude_sketch_bidirectional`
+`create_datum_plane` → `create_sketch_on_plane` → `add_contour_to_sketch` → `extrude_sketch_bidirectional` (additive)
+                                                                                                         or `pocket_sketch` (subtractive)
 
 See Scenario E in the main [INTEGRATION_TEST_PLAN.md](../INTEGRATION_TEST_PLAN.md) for the end-to-end regression test.
 
@@ -83,30 +84,48 @@ Once the constraints bug is resolved, test each geometry type individually:
 
 ## 4. `extrude_sketch_bidirectional`
 - **Signature**: `extrude_sketch_bidirectional(doc_name, sketch_name, length_forward, length_backward, use_midplane)`
-- **Known**: ⚠️ **Requires sketch inside a PartDesign::Body** — error: "Sketch is not in a Body"
-- **Expected**: Creates PartDesign::Pad (or equivalent)
-- **Alternative**: Use `execute_code` to create Pad:
-  ```python
-  pad = doc.addObject("PartDesign::Pad", "name")
-  pad.Profile = sketch  # NOT pad.Sketch — that's wrong!
-  pad.Length = 25.0
-  body.addObject(pad)
-  ```
+- **Known**: ✅ Working — `getParentGroup()` fallback body search fixed 2026-05-10
+- **Creates**: PartDesign::Pad named `{sketch_name}_solid`
 
 ### Extrude modes
 
 | Mode | Parameters | Status |
 |------|-----------|--------|
-| Forward only | `length_forward=25, length_backward=0` | ⏳ Untested (requires Body) |
+| Forward only | `length_forward=25, length_backward=0` | ✅ Tested 2026-05-10 |
 | Bidirectional | `length_forward=20, length_backward=10` — verify total depth 30 | ⏳ Untested |
 | Midplane | `use_midplane=True, length_forward=30` — verify symmetric | ⏳ Untested |
 
-**Note**: The full sketch workflow works end-to-end when the sketch is created via
-`create_sketch_on_plane` (which places it inside a Body). See Scenario E in the main plan.
+---
+
+## 5. `pocket_sketch`
+- **Signature**: `pocket_sketch(doc_name, sketch_name, depth, depth2, through_all, symmetric)`
+- **Known**: ⏳ Untested — added 2026-05-10
+- **Creates**: PartDesign::Pocket named `{sketch_name}_pocket`
+- **Prerequisite**: Sketch must be inside a PartDesign Body (use `create_sketch_on_plane`). The Body must already have an additive solid (e.g. from `extrude_sketch_bidirectional`) for the pocket to cut into.
+
+### Pocket modes
+
+| Mode | Parameters | Expected result | Status |
+|------|-----------|-----------------|--------|
+| Fixed depth | `depth=10` | Pocket 10mm deep | ⏳ Untested |
+| Two-sided | `depth=10, depth2=5` — verify total cut 15mm | Both directions cut | ⏳ Untested |
+| Through-all | `through_all=True` — verify `depth` ignored | Cuts entire solid | ⏳ Untested |
+| Symmetric | `symmetric=True, depth=20` — verify 10mm each side | Symmetric cut | ⏳ Untested |
+
+### Suggested test sequence
+1. `create_document("PocketTest")`
+2. `create_datum_plane("PocketTest", "base", alignment="xy")`
+3. `create_sketch_on_plane("PocketTest", "base")` → creates `base_sketch`
+4. `add_contour_to_sketch` — 80×60 rectangle → `base_sketch`
+5. `extrude_sketch_bidirectional("PocketTest", "base_sketch", length_forward=30)` → creates `base_solid`
+6. `create_sketch_on_plane("PocketTest", "base")` → creates second sketch (name will differ — check with `get_objects`)
+7. `add_contour_to_sketch` — 20×20 rectangle centred on face
+8. `pocket_sketch("PocketTest", "<second_sketch_name>", depth=15)` → creates pocket
+9. `measure_object("PocketTest", "<pocket_name>")` — verify volume < 80×60×30 = 144000 mm³
 
 ---
 
-## 5. `attach_solid_to_plane`
+## 6. `attach_solid_to_plane`
 - **Signature**: `attach_solid_to_plane(doc_name, solid_body_name, target_plane_name, ...)`
 - **Known**: ⏳ Untested
 - **Purpose**: Positions a solid body relative to a named reference plane
