@@ -6,7 +6,11 @@ from .responses import parse_execute_result
 
 
 def create_loft(ctx: Context, freecad_connection, add_screenshot_helper, doc_name: str, sketch_names: list[str], result_name: str, solid: bool = True, ruled: bool = False) -> list[TextContent | ImageContent]:
-    """Create a loft between multiple sketches"""
+    """Create a loft between multiple sketches.
+
+    Automatically uses PartDesign::AdditiveLoft when the sketches are inside a
+    PartDesign Body, otherwise falls back to Part::Loft.
+    """
     sketches_list = ", ".join([f"doc.getObject('{name}')" for name in sketch_names])
     solid_flag = 'True' if solid else 'False'
     ruled_flag = 'True' if ruled else 'False'
@@ -22,10 +26,23 @@ else:
     if missing:
         print(f'ERROR: Sketches not found: {{missing}}')
     else:
-        loft = doc.addObject('Part::Loft', '{result_name}')
-        loft.Sections = sections
-        loft.Solid = {solid_flag}
-        loft.Ruled = {ruled_flag}
+        # Detect whether profiles live inside a PartDesign Body
+        body = sections[0].getParentGroup() if hasattr(sections[0], 'getParentGroup') else None
+        if not body or 'Body' not in body.TypeId:
+            for o in doc.Objects:
+                if 'Body' in o.TypeId and hasattr(o, 'Group') and sections[0] in o.Group:
+                    body = o
+                    break
+        if body:
+            loft = body.newObject('PartDesign::AdditiveLoft', '{result_name}')
+            loft.Profile = (sections[0], [''])
+            loft.Sections = [(s, ['']) for s in sections[1:]]
+            loft.Ruled = {ruled_flag}
+        else:
+            loft = doc.addObject('Part::Loft', '{result_name}')
+            loft.Sections = sections
+            loft.Solid = {solid_flag}
+            loft.Ruled = {ruled_flag}
         doc.recompute()
         print('SUCCESS: Loft {result_name} created')
 """

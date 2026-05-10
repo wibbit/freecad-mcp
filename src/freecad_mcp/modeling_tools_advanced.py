@@ -34,7 +34,7 @@ def add_fillet(ctx: Context, freecad_connection, add_screenshot_helper,
     """
     res_name = result_name or f"{object_name}_filleted"
     edges_list = ', '.join([f'"{e}"' for e in edges])
-    
+
     code = f"""
 import FreeCAD as App
 import Part
@@ -48,27 +48,34 @@ elif not hasattr(obj, 'Shape') or obj.Shape.isNull():
     print('ERROR: Object has no valid shape')
 else:
     try:
-        # Create fillet object
-        fillet = doc.addObject('Part::Fillet', '{res_name}')
-        fillet.Base = obj
-        
-        # Parse edge names and add to fillet
         edge_names = [{edges_list}]
-        edges_to_fillet = []
-        
-        for edge_name in edge_names:
-            edge_idx = int(edge_name.replace('Edge', ''))
-            # Format: (edge_index, start_radius, end_radius)
-            edges_to_fillet.append((edge_idx, {radius}, {radius}))
-        
-        fillet.Edges = edges_to_fillet
+
+        # Detect PartDesign Body — use PartDesign::Fillet to stay in scope
+        body = obj.getParentGroup() if hasattr(obj, 'getParentGroup') else None
+        if not body or 'Body' not in body.TypeId:
+            for o in doc.Objects:
+                if 'Body' in o.TypeId and hasattr(o, 'Group') and obj in o.Group:
+                    body = o
+                    break
+
+        if body:
+            fillet = body.newObject('PartDesign::Fillet', '{res_name}')
+            fillet.Base = (obj, edge_names)
+            fillet.Radius = {radius}
+        else:
+            fillet = doc.addObject('Part::Fillet', '{res_name}')
+            fillet.Base = obj
+            edges_to_fillet = []
+            for edge_name in edge_names:
+                edge_idx = int(edge_name.replace('Edge', ''))
+                edges_to_fillet.append((edge_idx, {radius}, {radius}))
+            fillet.Edges = edges_to_fillet
+            obj.ViewObject.Visibility = False
+
         doc.recompute()
 
-        # Hide original
-        obj.ViewObject.Visibility = False
-
         if fillet.Shape.isValid():
-            print(f'SUCCESS: Fillet added to {{len(edges_to_fillet)}} edges with radius {radius}')
+            print(f'SUCCESS: Fillet added to {{len(edge_names)}} edges with radius {radius}')
         else:
             print('ERROR: Fillet operation produced invalid shape')
     except Exception as e:
@@ -102,7 +109,7 @@ def add_chamfer(ctx: Context, freecad_connection, add_screenshot_helper,
     """
     res_name = result_name or f"{object_name}_chamfered"
     edges_list = ', '.join([f'"{e}"' for e in edges])
-    
+
     code = f"""
 import FreeCAD as App
 import Part
@@ -116,27 +123,34 @@ elif not hasattr(obj, 'Shape') or obj.Shape.isNull():
     print('ERROR: Object has no valid shape')
 else:
     try:
-        # Create chamfer object
-        chamfer = doc.addObject('Part::Chamfer', '{res_name}')
-        chamfer.Base = obj
-        
-        # Parse edge names and add to chamfer
         edge_names = [{edges_list}]
-        edges_to_chamfer = []
-        
-        for edge_name in edge_names:
-            edge_idx = int(edge_name.replace('Edge', ''))
-            # Format: (edge_index, dist1, dist2)
-            edges_to_chamfer.append((edge_idx, {distance}, {distance}))
 
-        chamfer.Edges = edges_to_chamfer
+        # Detect PartDesign Body — use PartDesign::Chamfer to stay in scope
+        body = obj.getParentGroup() if hasattr(obj, 'getParentGroup') else None
+        if not body or 'Body' not in body.TypeId:
+            for o in doc.Objects:
+                if 'Body' in o.TypeId and hasattr(o, 'Group') and obj in o.Group:
+                    body = o
+                    break
+
+        if body:
+            chamfer = body.newObject('PartDesign::Chamfer', '{res_name}')
+            chamfer.Base = (obj, edge_names)
+            chamfer.Size = {distance}
+        else:
+            chamfer = doc.addObject('Part::Chamfer', '{res_name}')
+            chamfer.Base = obj
+            edges_to_chamfer = []
+            for edge_name in edge_names:
+                edge_idx = int(edge_name.replace('Edge', ''))
+                edges_to_chamfer.append((edge_idx, {distance}, {distance}))
+            chamfer.Edges = edges_to_chamfer
+            obj.ViewObject.Visibility = False
+
         doc.recompute()
 
-        # Hide original
-        obj.ViewObject.Visibility = False
-
         if chamfer.Shape.isValid():
-            print(f'SUCCESS: Chamfer added to {{len(edges_to_chamfer)}} edges with distance {distance}')
+            print(f'SUCCESS: Chamfer added to {{len(edge_names)}} edges with distance {distance}')
         else:
             print('ERROR: Chamfer operation produced invalid shape')
     except Exception as e:
