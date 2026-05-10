@@ -59,10 +59,12 @@ def add_contour_to_sketch(
             ]
         
         constraints = constraints or []
-        
+
+        n_geo = len(geometry_elements)
+        n_con = len(constraints)
         geometry_code = _generate_geometry_code(geometry_elements)
         constraint_code = _generate_constraint_code(constraints, fix_first_point_to_origin)
-        
+
         code = f"""
 import FreeCAD as App
 import Part
@@ -79,12 +81,12 @@ else:
         try:
             # Add geometry
 {geometry_code}
-            
+
             # Add constraints
 {constraint_code}
-            
+
             doc.recompute()
-            print(f"SUCCESS: Added {{len(geometry_elements)}} geometry elements and {{len(constraints)}} constraints to sketch '{sketch_name}'")
+            print("SUCCESS: Added {n_geo} geometry elements and {n_con} constraints to sketch '{sketch_name}'")
         except Exception as e:
             print(f"ERROR: {{str(e)}}")
 """
