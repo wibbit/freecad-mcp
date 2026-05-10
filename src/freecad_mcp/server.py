@@ -132,7 +132,7 @@ def _log_tool(func):
             return result
         except Exception as e:
             logger.error("tool ← %s FAIL (%.2fs): %s", func.__name__, time.monotonic() - t, e)
-            return [TextContent(type="text", text=f"Error calling {func.__name__}: {e}")]
+            raise
 
     return wrapper
 
@@ -241,12 +241,12 @@ def create_document(ctx: Context, name: str) -> list[TextContent]:
     try:
         res = freecad.create_document(name)
         if res["success"]:
-            return [TextContent(type="text", text=f"Document '{res['data']['document_name']}' created successfully")]
+            raise Exception(f"Document '{res['data']['document_name']}' created successfully")
         else:
-            return [TextContent(type="text", text=f"Failed to create document: {res['error']}")]
+            raise Exception(f"Failed to create document: {res['error']}")
     except Exception as e:
         logger.error(f"Failed to create document: {str(e)}")
-        return [TextContent(type="text", text=f"Failed to create document: {str(e)}")]
+        raise Exception(f"Failed to create document: {str(e)}")
 
 
 @mcp.tool()
@@ -381,13 +381,13 @@ def create_object(
         res = freecad.create_object(doc_name, obj_data)
         screenshot = freecad.get_active_screenshot()
         if res["success"]:
-            response = [TextContent(type="text", text=f"Object '{res['data']['object_name']}' created successfully")]
+            raise Exception(f"Object '{res['data']['object_name']}' created successfully")
         else:
-            response = [TextContent(type="text", text=f"Failed to create object: {res['error']}")]
+            raise Exception(f"Failed to create object: {res['error']}")
         return add_screenshot_if_available(response, screenshot)
     except Exception as e:
         logger.error(f"Failed to create object: {str(e)}")
-        return [TextContent(type="text", text=f"Failed to create object: {str(e)}")]
+        raise Exception(f"Failed to create object: {str(e)}")
 
 
 @mcp.tool()
@@ -411,13 +411,13 @@ def edit_object(
         res = freecad.edit_object(doc_name, obj_name, {"Properties": obj_properties})
         screenshot = freecad.get_active_screenshot()
         if res["success"]:
-            response = [TextContent(type="text", text=f"Object '{res['data']['object_name']}' edited successfully")]
+            raise Exception(f"Object '{res['data']['object_name']}' edited successfully")
         else:
-            response = [TextContent(type="text", text=f"Failed to edit object: {res['error']}")]
+            raise Exception(f"Failed to edit object: {res['error']}")
         return add_screenshot_if_available(response, screenshot)
     except Exception as e:
         logger.error(f"Failed to edit object: {str(e)}")
-        return [TextContent(type="text", text=f"Failed to edit object: {str(e)}")]
+        raise Exception(f"Failed to edit object: {str(e)}")
 
 
 @mcp.tool()
@@ -437,13 +437,13 @@ def delete_object(ctx: Context, doc_name: str, obj_name: str) -> list[TextConten
         res = freecad.delete_object(doc_name, obj_name)
         screenshot = freecad.get_active_screenshot()
         if res["success"]:
-            response = [TextContent(type="text", text=f"Object '{res['data']['object_name']}' deleted successfully")]
+            raise Exception(f"Object '{res['data']['object_name']}' deleted successfully")
         else:
-            response = [TextContent(type="text", text=f"Failed to delete object: {res['error']}")]
+            raise Exception(f"Failed to delete object: {res['error']}")
         return add_screenshot_if_available(response, screenshot)
     except Exception as e:
         logger.error(f"Failed to delete object: {str(e)}")
-        return [TextContent(type="text", text=f"Failed to delete object: {str(e)}")]
+        raise Exception(f"Failed to delete object: {str(e)}")
 
 
 @mcp.tool()
@@ -462,13 +462,13 @@ def execute_code(ctx: Context, code: str) -> list[TextContent | ImageContent]:
         res = freecad.execute_code(code)
         screenshot = freecad.get_active_screenshot()
         if res["success"]:
-            response = [TextContent(type="text", text=f"Code executed successfully.\nOutput: {res['data']['output']}")]
+            raise Exception(f"Code executed successfully.\nOutput: {res['data']['output']}")
         else:
-            response = [TextContent(type="text", text=f"Failed to execute code: {res['error']}")]
+            raise Exception(f"Failed to execute code: {res['error']}")
         return add_screenshot_if_available(response, screenshot)
     except Exception as e:
         logger.error(f"Failed to execute code: {str(e)}")
-        return [TextContent(type="text", text=f"Failed to execute code: {str(e)}")]
+        raise Exception(f"Failed to execute code: {str(e)}")
 
 
 @mcp.tool()
@@ -520,13 +520,13 @@ def insert_part_from_library(ctx: Context, relative_path: str) -> list[TextConte
         res = freecad.insert_part_from_library(relative_path)
         screenshot = freecad.get_active_screenshot()
         if res["success"]:
-            response = [TextContent(type="text", text="Part inserted from library successfully")]
+            raise Exception("Part inserted from library successfully")
         else:
-            response = [TextContent(type="text", text=f"Failed to insert part from library: {res['error']}")]
+            raise Exception(f"Failed to insert part from library: {res['error']}")
         return add_screenshot_if_available(response, screenshot)
     except Exception as e:
         logger.error(f"Failed to insert part from library: {str(e)}")
-        return [TextContent(type="text", text=f"Failed to insert part from library: {str(e)}")]
+        raise Exception(f"Failed to insert part from library: {str(e)}")
 
 
 @mcp.tool()
@@ -549,10 +549,10 @@ def get_objects(ctx: Context, doc_name: str) -> list[TextContent | ImageContent]
             response = [TextContent(type="text", text=json.dumps(res["data"]))]
             return add_screenshot_if_available(response, screenshot)
         else:
-            return [TextContent(type="text", text=f"Failed to get objects: {res['error']}")]
+            raise Exception(f"Failed to get objects: {res['error']}")
     except Exception as e:
         logger.error(f"Failed to get objects: {str(e)}")
-        return [TextContent(type="text", text=f"Failed to get objects: {str(e)}")]
+        raise Exception(f"Failed to get objects: {str(e)}")
 
 
 @mcp.tool()
@@ -576,10 +576,10 @@ def get_object(ctx: Context, doc_name: str, obj_name: str) -> list[TextContent |
             response = [TextContent(type="text", text=json.dumps(res["data"]))]
             return add_screenshot_if_available(response, screenshot)
         else:
-            return [TextContent(type="text", text=f"Failed to get object: {res['error']}")]
+            raise Exception(f"Failed to get object: {res['error']}")
     except Exception as e:
         logger.error(f"Failed to get object: {str(e)}")
-        return [TextContent(type="text", text=f"Failed to get object: {str(e)}")]
+        raise Exception(f"Failed to get object: {str(e)}")
 
 
 @mcp.tool()
@@ -595,10 +595,10 @@ def get_parts_list(ctx: Context) -> list[TextContent]:
         res = freecad.get_parts_list()
         if res.get("success") and res.get("data"):
             return [TextContent(type="text", text=json.dumps(res["data"]))]
-        return [TextContent(type="text", text="No parts found. Install the FreeCAD parts_library addon to use this feature.")]
+        raise Exception("No parts found. Install the FreeCAD parts_library addon to use this feature.")
     except Exception as e:
         logger.error(f"Failed to get parts list: {e}")
-        return [TextContent(type="text", text=f"Failed to get parts list: {e}")]
+        raise Exception(f"Failed to get parts list: {e}")
 
 
 @mcp.tool()
@@ -614,10 +614,10 @@ def list_documents(ctx: Context) -> list[TextContent]:
         res = freecad.list_documents()
         if res.get("success"):
             return [TextContent(type="text", text=json.dumps(res["data"]))]
-        return [TextContent(type="text", text=f"Failed to list documents: {res.get('error')}")]
+        raise Exception(f"Failed to list documents: {res.get('error')}")
     except Exception as e:
         logger.error(f"Failed to list documents: {e}")
-        return [TextContent(type="text", text=f"Failed to list documents: {e}")]
+        raise Exception(f"Failed to list documents: {e}")
 
 
 @mcp.tool()
@@ -634,7 +634,7 @@ def get_freecad_status(ctx: Context) -> list[TextContent]:
     if res["success"]:
         return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
     else:
-        return [TextContent(type="text", text=f"Failed to get status: {res['error']}")]
+        raise Exception(f"Failed to get status: {res['error']}")
 
 
 @mcp.tool()
@@ -665,9 +665,9 @@ def get_shape_topology(
         if res["success"]:
             return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
         else:
-            return [TextContent(type="text", text=f"Failed to get shape topology: {res['error']}")]
+            raise Exception(f"Failed to get shape topology: {res['error']}")
     except Exception as e:
-        return [TextContent(type="text", text=f"Failed to get shape topology: {e}")]
+        raise Exception(f"Failed to get shape topology: {e}")
 
 
 @mcp.tool()
@@ -693,9 +693,9 @@ def save_document(
         if res["success"]:
             return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
         else:
-            return [TextContent(type="text", text=f"Failed to save document: {res['error']}")]
+            raise Exception(f"Failed to save document: {res['error']}")
     except Exception as e:
-        return [TextContent(type="text", text=f"Failed to save document: {e}")]
+        raise Exception(f"Failed to save document: {e}")
 
 
 @mcp.tool()
@@ -718,9 +718,9 @@ def load_document(
         if res["success"]:
             return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
         else:
-            return [TextContent(type="text", text=f"Failed to load document: {res['error']}")]
+            raise Exception(f"Failed to load document: {res['error']}")
     except Exception as e:
-        return [TextContent(type="text", text=f"Failed to load document: {e}")]
+        raise Exception(f"Failed to load document: {e}")
 
 
 @mcp.tool()
@@ -751,9 +751,9 @@ def measure_object(
         if res["success"]:
             return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
         else:
-            return [TextContent(type="text", text=f"Failed to measure object: {res['error']}")]
+            raise Exception(f"Failed to measure object: {res['error']}")
     except Exception as e:
-        return [TextContent(type="text", text=f"Failed to measure object: {e}")]
+        raise Exception(f"Failed to measure object: {e}")
 
 
 @mcp.tool()
@@ -780,9 +780,9 @@ def set_object_visibility(
         if res["success"]:
             return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
         else:
-            return [TextContent(type="text", text=f"Failed to set object visibility: {res['error']}")]
+            raise Exception(f"Failed to set object visibility: {res['error']}")
     except Exception as e:
-        return [TextContent(type="text", text=f"Failed to set object visibility: {e}")]
+        raise Exception(f"Failed to set object visibility: {e}")
 
 
 @mcp.tool()
@@ -807,9 +807,9 @@ def undo(
         if res["success"]:
             return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
         else:
-            return [TextContent(type="text", text=f"Failed to undo: {res['error']}")]
+            raise Exception(f"Failed to undo: {res['error']}")
     except Exception as e:
-        return [TextContent(type="text", text=f"Failed to undo: {e}")]
+        raise Exception(f"Failed to undo: {e}")
 
 
 @mcp.tool()
@@ -838,9 +838,9 @@ def export_object(
         if res["success"]:
             return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
         else:
-            return [TextContent(type="text", text=f"Failed to export object: {res['error']}")]
+            raise Exception(f"Failed to export object: {res['error']}")
     except Exception as e:
-        return [TextContent(type="text", text=f"Failed to export object: {e}")]
+        raise Exception(f"Failed to export object: {e}")
 
 
 @mcp.tool()
@@ -867,9 +867,9 @@ def spreadsheet_read(
         if res["success"]:
             return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
         else:
-            return [TextContent(type="text", text=f"Failed to read spreadsheet: {res['error']}")]
+            raise Exception(f"Failed to read spreadsheet: {res['error']}")
     except Exception as e:
-        return [TextContent(type="text", text=f"Failed to read spreadsheet: {e}")]
+        raise Exception(f"Failed to read spreadsheet: {e}")
 
 
 @mcp.tool()
@@ -898,9 +898,9 @@ def spreadsheet_write(
         if res["success"]:
             return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
         else:
-            return [TextContent(type="text", text=f"Failed to write spreadsheet: {res['error']}")]
+            raise Exception(f"Failed to write spreadsheet: {res['error']}")
     except Exception as e:
-        return [TextContent(type="text", text=f"Failed to write spreadsheet: {e}")]
+        raise Exception(f"Failed to write spreadsheet: {e}")
 
 
 @mcp.tool()
@@ -932,9 +932,9 @@ def copy_object(
         if res["success"]:
             return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
         else:
-            return [TextContent(type="text", text=f"Failed to copy object: {res['error']}")]
+            raise Exception(f"Failed to copy object: {res['error']}")
     except Exception as e:
-        return [TextContent(type="text", text=f"Failed to copy object: {e}")]
+        raise Exception(f"Failed to copy object: {e}")
 
 
 @mcp.tool()
@@ -966,9 +966,9 @@ def create_techdraw_page(
         if res["success"]:
             return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
         else:
-            return [TextContent(type="text", text=f"Failed to create TechDraw page: {res['error']}")]
+            raise Exception(f"Failed to create TechDraw page: {res['error']}")
     except Exception as e:
-        return [TextContent(type="text", text=f"Failed to create TechDraw page: {e}")]
+        raise Exception(f"Failed to create TechDraw page: {e}")
 
 
 @mcp.tool()
@@ -1005,9 +1005,9 @@ def add_view_to_techdraw_page(
         if res["success"]:
             return [TextContent(type="text", text=json.dumps(res["data"], indent=2))]
         else:
-            return [TextContent(type="text", text=f"Failed to add view to TechDraw page: {res['error']}")]
+            raise Exception(f"Failed to add view to TechDraw page: {res['error']}")
     except Exception as e:
-        return [TextContent(type="text", text=f"Failed to add view to TechDraw page: {e}")]
+        raise Exception(f"Failed to add view to TechDraw page: {e}")
 
 
 @mcp.tool()
