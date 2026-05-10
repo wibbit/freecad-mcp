@@ -79,10 +79,14 @@ def serialize_object(obj):
             "Objects": [serialize_object(child) for child in obj.Objects],
         }
     else:
+        state = getattr(obj, "State", [])
+        has_error = any(s in ("Invalid", "Error") for s in state)
         result = {
             "Name": obj.Name,
             "Label": obj.Label,
             "TypeId": obj.TypeId,
+            "State": state,
+            "HasError": has_error,
             "Properties": {},
             "Placement": serialize_value(getattr(obj, "Placement", None)),
             "Shape": serialize_shape(getattr(obj, "Shape", None)),
