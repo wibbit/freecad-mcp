@@ -75,13 +75,14 @@ else:
 
             if {use_midplane}:
                 pad.Midplane = True
+                pad.Type = "Length"
                 pad.Length = {total_length}
             elif {length_backward} > 0:
-                pad.Type = 3
+                pad.Type = "TwoSides"
                 pad.Length = {length_forward}
                 pad.Length2 = {length_backward}
             else:
-                pad.Type = 0
+                pad.Type = "Length"
                 pad.Length = {length_forward}
 
             pad.ReferenceAxis = (sketch, ['N_Axis'])

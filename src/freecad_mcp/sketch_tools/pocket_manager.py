@@ -66,17 +66,17 @@ else:
             pocket.ReferenceAxis = (sketch, ['N_Axis'])
 
             if {through_all}:
-                pocket.Type = 1  # ThroughAll
+                pocket.Type = "ThroughAll"
             elif {symmetric}:
                 pocket.Midplane = True
-                pocket.Type = 0
+                pocket.Type = "Dimension"
                 pocket.Length = {depth}
             elif {depth2} > 0:
-                pocket.Type = 3  # TwoSides
+                pocket.Type = "TwoSides"
                 pocket.Length = {depth}
                 pocket.Length2 = {depth2}
             else:
-                pocket.Type = 0  # Dimension
+                pocket.Type = "Dimension"
                 pocket.Length = {depth}
 
             sketch.ViewObject.Visibility = False

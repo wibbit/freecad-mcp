@@ -48,14 +48,17 @@ def serialize_shape(shape):
         }
     except Exception:
         bound_box = None
-    return {
-        "Volume": shape.Volume,
-        "Area": shape.Area,
-        "VertexCount": len(shape.Vertexes),
-        "EdgeCount": len(shape.Edges),
-        "FaceCount": len(shape.Faces),
-        "BoundBox": bound_box,
-    }
+    try:
+        return {
+            "Volume": shape.Volume,
+            "Area": shape.Area,
+            "VertexCount": len(shape.Vertexes),
+            "EdgeCount": len(shape.Edges),
+            "FaceCount": len(shape.Faces),
+            "BoundBox": bound_box,
+        }
+    except Exception:
+        return {"BoundBox": bound_box, "invalid": True}
 
 
 def serialize_view_object(view):

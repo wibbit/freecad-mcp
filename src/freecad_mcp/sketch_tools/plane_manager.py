@@ -51,8 +51,7 @@ if not doc:
     print("ERROR: Document '{doc_name}' not found")
 else:
     body = doc.addObject('PartDesign::Body', '{plane_name}')
-    plane = doc.addObject('PartDesign::Plane', '{plane_name}_Datum')
-    body.addObject(plane)
+    plane = body.newObject('PartDesign::Plane', '{plane_name}_Datum')
     plane.MapMode = 'Deactivated'
     _placements = {{
         'XY': App.Placement(App.Vector(0, 0, {offset}), App.Rotation(0, 0, 0)),
