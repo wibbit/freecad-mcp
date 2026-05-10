@@ -2618,6 +2618,7 @@ def import_dxf(ctx: Context, doc_name: str, file_path: str, sketch_name: str, sc
 def main():
     """Run the MCP server"""
     import argparse
+    import sys
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--only-text-feedback", action="store_true", help="Only return text feedback")
@@ -2627,4 +2628,13 @@ def main():
     state.rpc_host = args.host
     logger.info(f"Only text feedback: {state.only_text_feedback}")
     logger.info(f"Connecting to FreeCAD RPC server at: {state.rpc_host}")
+
+    if not hasattr(sys.stdin, "buffer"):
+        print(
+            "ERROR: freecad-mcp must be launched as a subprocess by an MCP client (e.g. Claude Desktop, opencode).\n"
+            "       The stdio transport requires a real stdin pipe — running it directly in a shell or backgrounded is not supported.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     mcp.run()
