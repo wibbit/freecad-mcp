@@ -48,10 +48,8 @@ else:
             print("ERROR: Datum plane object '{plane_name}_Datum' not found")
         else:
             sketch = body.newObject('Sketcher::SketchObject', '{sketch_name}')
-
-            sketch.AttachmentSupport = [(datum_plane, '')]
+            sketch.AttachmentSupport = [(datum_plane, 'Face1')]
             sketch.MapMode = 'FlatFace'
-
             doc.recompute()
             print(f"SUCCESS: Sketch '{{sketch.Name}}' created on plane '{plane_name}'")
 """
@@ -130,7 +128,7 @@ else:
             print("ERROR: Datum plane '{plane_name}' not found")
         else:
             sketch = body.newObject('Sketcher::SketchObject', '{sketch_name}')
-            sketch.AttachmentSupport = [(datum_plane, '')]
+            sketch.AttachmentSupport = [(datum_plane, 'Face1')]
             sketch.MapMode = 'FlatFace'
             doc.recompute()
             print(f"SUCCESS: Sketch '{{sketch.Name}}' created in body '{body_name}' on plane '{plane_name}'")

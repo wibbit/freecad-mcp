@@ -414,6 +414,8 @@ class FreeCADRPC:
                         "__builtins__": __builtins__,
                         "FreeCAD": FreeCAD,
                         "FreeCADGui": FreeCADGui,
+                        "App": FreeCAD,       # standard FreeCAD scripting alias
+                        "Gui": FreeCADGui,    # standard FreeCAD scripting alias
                     }
                     exec(code, sandbox)
                 FreeCAD.Console.PrintMessage("Python code executed successfully.\n")
