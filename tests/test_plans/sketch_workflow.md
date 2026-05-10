@@ -3,9 +3,11 @@
 Datum plane creation, sketch attachment, contour building, and extrusion.
 Last updated: 2026-05-10
 
-The full workflow is sequential and must be executed in order:
-`create_datum_plane` → `create_sketch_on_plane` → `add_contour_to_sketch` → `extrude_sketch_bidirectional` (additive)
-                                                                                                         or `pocket_sketch` (subtractive)
+**Simple workflow** (one sketch, one solid — new Body per plane):
+`create_datum_plane` → `create_sketch_on_plane` → `add_contour_to_sketch` → `extrude_sketch_bidirectional` or `pocket_sketch`
+
+**Multi-feature workflow** (multiple sketches/features in one Body):
+`create_datum_plane` (creates Body) → `add_datum_plane_to_body` × N → `create_sketch_in_body` × N → `add_contour_to_sketch` × N → `extrude_sketch_bidirectional` / `pocket_sketch` / `create_loft`
 
 See Scenario E in the main [INTEGRATION_TEST_PLAN.md](../INTEGRATION_TEST_PLAN.md) for the end-to-end regression test.
 
@@ -125,7 +127,56 @@ Once the constraints bug is resolved, test each geometry type individually:
 
 ---
 
-## 6. `attach_solid_to_plane`
+## 6. `add_datum_plane_to_body`
+- **Signature**: `add_datum_plane_to_body(doc_name, body_name, plane_name, alignment, offset)`
+- **Known**: ⏳ Untested — added 2026-05-10
+- **Purpose**: Add a datum plane to an existing Body. Use after `create_datum_plane` (which creates the Body) to add further planes for multi-feature PartDesign parts.
+
+### Test cases
+
+| Test | Parameters | Expected | Status |
+|------|-----------|----------|--------|
+| Basic | `body_name="Holder", plane_name="DP_Top", alignment="xy", offset=28` | Plane inside Holder body at Z=28 | ⏳ Untested |
+| XZ plane | `alignment="xz", offset=16` | Plane at Y=16 in XZ orientation | ⏳ Untested |
+| Body not found | `body_name="NoSuchBody"` | Clear error message | ⏳ Untested |
+| Wrong type | `body_name` points to a Part::Box | Clear error: not a Body | ⏳ Untested |
+
+### Suggested multi-feature test sequence
+1. `create_datum_plane("Doc", "Holder", alignment="xy")` — creates Body "Holder" at Z=0
+2. `add_datum_plane_to_body("Doc", "Holder", "DP_Top", alignment="xy", offset=28)` — adds plane at Z=28
+3. `get_objects("Doc")` — confirm both `Holder` and `DP_Top` exist, `DP_Top` inside `Holder`
+
+---
+
+## 7. `create_sketch_in_body`
+- **Signature**: `create_sketch_in_body(doc_name, body_name, plane_name)`
+- **Known**: ⏳ Untested — added 2026-05-10
+- **Purpose**: Create a sketch inside an existing Body on a named datum plane within it. Produces `{plane_name}_sketch`.
+
+### Test cases
+
+| Test | Parameters | Expected | Status |
+|------|-----------|----------|--------|
+| Basic | `body_name="Holder", plane_name="DP_Top"` | `DP_Top_sketch` inside Holder | ⏳ Untested |
+| Body not found | `body_name="NoSuchBody"` | Clear error message | ⏳ Untested |
+| Plane not found | `plane_name="NoSuchPlane"` | Clear error message | ⏳ Untested |
+
+### Suggested end-to-end multi-Body test
+1. `create_datum_plane("Doc", "Holder", alignment="xy", offset=0)`
+2. `add_datum_plane_to_body("Doc", "Holder", "DP_NeckBottom", alignment="xy", offset=16)`
+3. `add_datum_plane_to_body("Doc", "Holder", "DP_NeckTop", alignment="xy", offset=28)`
+4. `create_sketch_on_plane("Doc", "Holder")` → `Holder_sketch` (flange profile)
+5. `create_sketch_in_body("Doc", "Holder", "DP_NeckBottom")` → `DP_NeckBottom_sketch`
+6. `create_sketch_in_body("Doc", "Holder", "DP_NeckTop")` → `DP_NeckTop_sketch`
+7. `get_objects("Doc")` — all three sketches should be inside the same `Holder` Body
+8. `add_contour_to_sketch` on each sketch
+9. `extrude_sketch_bidirectional("Doc", "Holder_sketch", 10)` → flange pad
+10. `create_loft("Doc", ["DP_NeckBottom_sketch", "DP_NeckTop_sketch"])` → neck transition
+11. `measure_object` — verify resulting solid
+
+---
+
+## 8. `attach_solid_to_plane`
 - **Signature**: `attach_solid_to_plane(doc_name, solid_body_name, target_plane_name, ...)`
 - **Known**: ⏳ Untested
 - **Purpose**: Positions a solid body relative to a named reference plane

@@ -6,12 +6,12 @@ Identified 2026-05-10. Check off as implemented and tested.
 
 ## Required — blocks correct PartDesign workflow
 
-- [ ] **`add_datum_plane_to_body(doc_name, body_name, plane_name, alignment, offset)`**
+- [x] **`add_datum_plane_to_body(doc_name, body_name, plane_name, alignment, offset)`** — implemented 2026-05-10
   Add a datum plane to an existing Body rather than always creating a new one.
   Currently `create_datum_plane` creates one Body per plane, making multi-feature
   PartDesign parts impossible without `execute_code`.
 
-- [ ] **`create_sketch_in_body(doc_name, body_name, plane_name)`**
+- [x] **`create_sketch_in_body(doc_name, body_name, plane_name)`** — implemented 2026-05-10
   Create a sketch inside an existing Body on a named datum plane within it.
   Companion to `add_datum_plane_to_body` — together they allow a full PartDesign
   feature tree in a single Body.

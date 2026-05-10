@@ -33,8 +33,8 @@ from .modeling_tools_advanced import (
     import_airfoil_profile as _import_airfoil_profile,
     import_dxf as _import_dxf,
 )
-from .sketch_tools.plane_manager import create_datum_plane as _create_datum_plane
-from .sketch_tools.sketch_manager import create_sketch_on_plane as _create_sketch_on_plane
+from .sketch_tools.plane_manager import create_datum_plane as _create_datum_plane, add_datum_plane_to_body as _add_datum_plane_to_body
+from .sketch_tools.sketch_manager import create_sketch_on_plane as _create_sketch_on_plane, create_sketch_in_body as _create_sketch_in_body
 from .sketch_tools.contour_builder import add_contour_to_sketch as _add_contour_to_sketch
 from .sketch_tools.extrude_manager import extrude_sketch_bidirectional as _extrude_sketch_bidirectional
 from .sketch_tools.pocket_manager import pocket_sketch as _pocket_sketch
@@ -184,7 +184,7 @@ mcp = FastMCP(
         "3. Read the relevant workflow prompt before any multi-step task: session_startup_guide_prompt (session checklist), sketch_workflow (sketch-to-solid), boolean_operations_guide (combining/subtracting solids), assembly_guide (Assembly3 and Assembly4), part_primitives_guide (Part primitives and boolean ops), fem_workflow (FEM stress analysis), asset_creation_strategy (general overview).\n\n"
         "Tool groups:\n"
         "- Document/object management: create_document, list_documents, get_objects, get_object, create_object, edit_object, delete_object, get_freecad_status\n"
-        "- Sketch workflow: create_datum_plane, create_sketch_on_plane, add_contour_to_sketch, extrude_sketch_bidirectional, pocket_sketch, attach_solid_to_plane\n"
+        "- Sketch workflow: create_datum_plane, add_datum_plane_to_body, create_sketch_on_plane, create_sketch_in_body, add_contour_to_sketch, extrude_sketch_bidirectional, pocket_sketch, attach_solid_to_plane\n"
         "- Boolean operations: boolean_union, boolean_cut, boolean_intersection\n"
         "- Advanced modeling: create_loft, create_revolve, create_sweep, create_spline_3d, add_fillet, add_chamfer, shell_object, mirror_object, circular_pattern, linear_pattern, create_reference_plane, create_reference_axis, import_airfoil_profile, import_dxf\n"
         "- Assembly: create_assembly3, create_assembly4 and related tools\n"
@@ -1119,6 +1119,89 @@ def create_sketch_on_plane(
     """
     freecad = get_freecad_connection()
     return _create_sketch_on_plane(ctx, freecad, add_screenshot_if_available, doc_name, plane_name)
+
+
+@mcp.tool()
+@_log_tool
+def add_datum_plane_to_body(
+    ctx: Context,
+    doc_name: str,
+    body_name: str,
+    plane_name: str,
+    alignment: Literal["xy", "xz", "yz"] = "xy",
+    offset: float = 0.0,
+) -> list[TextContent | ImageContent]:
+    """Add a datum plane to an existing PartDesign Body.
+
+    Use this when building a multi-feature PartDesign part in a single Body — for
+    example, a Pad followed by a Pocket on a different plane, or a Loft between two
+    profiles at different heights. All features added via create_sketch_in_body and
+    extrude_sketch_bidirectional / pocket_sketch will share the same Body and form a
+    single coherent PartDesign feature tree.
+
+    This is the companion to create_datum_plane: use create_datum_plane to start a
+    new Body from scratch; use add_datum_plane_to_body to add further planes to an
+    existing Body.
+
+    Args:
+        doc_name: Document name
+        body_name: Name of the existing PartDesign::Body (e.g. created by create_datum_plane or create_object)
+        plane_name: Name for the new datum plane
+        alignment: Plane orientation — 'xy', 'xz', or 'yz' (default: 'xy')
+        offset: Offset from origin along the plane normal (default: 0.0)
+
+    Returns:
+        Confirmation message and screenshot
+
+    Example:
+        {
+            "doc_name": "MyDocument",
+            "body_name": "Holder",
+            "plane_name": "DP_NeckBottom",
+            "alignment": "xy",
+            "offset": 16.0
+        }
+    """
+    freecad = get_freecad_connection()
+    return _add_datum_plane_to_body(ctx, freecad, add_screenshot_if_available, doc_name, body_name, plane_name, alignment, offset)
+
+
+@mcp.tool()
+@_log_tool
+def create_sketch_in_body(
+    ctx: Context,
+    doc_name: str,
+    body_name: str,
+    plane_name: str,
+) -> list[TextContent | ImageContent]:
+    """Create a sketch inside an existing PartDesign Body on a named datum plane.
+
+    Use this after add_datum_plane_to_body to add sketches to a shared Body. All
+    sketches and features created this way share the same Body and form a single
+    PartDesign feature tree — which is required for Loft between profiles, Pocket
+    into an existing solid, and LinearPattern / Mirror across features.
+
+    The sketch is automatically named '{plane_name}_sketch'.
+
+    Args:
+        doc_name: Document name
+        body_name: Name of the existing PartDesign::Body
+        plane_name: Name of the datum plane inside the body to attach the sketch to
+
+    Returns:
+        Confirmation message and screenshot
+
+    Example:
+        {
+            "doc_name": "MyDocument",
+            "body_name": "Holder",
+            "plane_name": "DP_NeckBottom"
+        }
+
+        This creates: "DP_NeckBottom_sketch" inside Body "Holder"
+    """
+    freecad = get_freecad_connection()
+    return _create_sketch_in_body(ctx, freecad, add_screenshot_if_available, doc_name, body_name, plane_name)
 
 
 @mcp.tool()
