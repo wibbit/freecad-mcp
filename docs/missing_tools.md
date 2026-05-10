@@ -16,7 +16,7 @@ Identified 2026-05-10. Check off as implemented and tested.
   Companion to `add_datum_plane_to_body` — together they allow a full PartDesign
   feature tree in a single Body.
 
-- [ ] **`create_sketch_on_face(doc_name, body_name, obj_name, face_name)`**
+- [x] **`create_sketch_on_face(doc_name, body_name, obj_name, face_name)`** — implemented 2026-05-10
   Create a sketch directly on an existing solid face. Needed for ribs, drain holes,
   and any feature added to an existing solid without an intermediate datum plane.
   Call `get_shape_topology` first to get valid face names.

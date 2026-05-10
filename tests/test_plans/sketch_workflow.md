@@ -176,7 +176,35 @@ Once the constraints bug is resolved, test each geometry type individually:
 
 ---
 
-## 8. `attach_solid_to_plane`
+## 8. `create_sketch_on_face`
+- **Signature**: `create_sketch_on_face(doc_name, body_name, obj_name, face_name, sketch_name?)`
+- **Known**: ⏳ Untested — added 2026-05-10
+- **Purpose**: Attach a sketch directly to a planar face of an existing solid. Prerequisite: call `get_shape_topology` first to get valid face names.
+- **Creates**: `{obj_name}_{face_name}_sketch` (or explicit `sketch_name`) inside the specified Body
+
+### Test cases
+
+| Test | Parameters | Expected | Status |
+|------|-----------|----------|--------|
+| Top face of box | `obj_name="Box", face_name="Face6"` | Sketch on top face | ⏳ Untested |
+| Side face | `face_name="Face2"` | Sketch on side face | ⏳ Untested |
+| Non-planar face | Cylinder curved face | Clear error or warning | ⏳ Untested |
+| Bad face name | `face_name="Face99"` | Clear out-of-range error | ⏳ Untested |
+| Explicit sketch name | `sketch_name="BoreProfile"` | Sketch named "BoreProfile" | ⏳ Untested |
+
+### Suggested test sequence
+1. `create_document("FaceSketchTest")`
+2. `create_object("FaceSketchTest", "Part::Box", "Box", {"Length":80,"Width":60,"Height":40})`
+3. `create_object("FaceSketchTest", "PartDesign::Body", "Holder")` — body for sketches
+4. `get_shape_topology("FaceSketchTest", "Box")` — identify top face name
+5. `create_sketch_on_face("FaceSketchTest", "Holder", "Box", "<top_face>", "SlotProfile")`
+6. `add_contour_to_sketch` — 20×40 rectangle
+7. `pocket_sketch("FaceSketchTest", "SlotProfile", depth=15)` — cut slot into box
+8. `measure_object("FaceSketchTest", "SlotProfile_pocket")` — volume < 80×60×40 = 192000
+
+---
+
+## 9. `attach_solid_to_plane`
 - **Signature**: `attach_solid_to_plane(doc_name, solid_body_name, target_plane_name, ...)`
 - **Known**: ⏳ Untested
 - **Purpose**: Positions a solid body relative to a named reference plane

@@ -35,6 +35,7 @@ from .modeling_tools_advanced import (
 )
 from .sketch_tools.plane_manager import create_datum_plane as _create_datum_plane, add_datum_plane_to_body as _add_datum_plane_to_body
 from .sketch_tools.sketch_manager import create_sketch_on_plane as _create_sketch_on_plane, create_sketch_in_body as _create_sketch_in_body
+from .sketch_tools.face_sketch_manager import create_sketch_on_face as _create_sketch_on_face
 from .sketch_tools.contour_builder import add_contour_to_sketch as _add_contour_to_sketch
 from .sketch_tools.extrude_manager import extrude_sketch_bidirectional as _extrude_sketch_bidirectional
 from .sketch_tools.pocket_manager import pocket_sketch as _pocket_sketch
@@ -184,7 +185,7 @@ mcp = FastMCP(
         "3. Read the relevant workflow prompt before any multi-step task: session_startup_guide_prompt (session checklist), sketch_workflow (sketch-to-solid), boolean_operations_guide (combining/subtracting solids), assembly_guide (Assembly3 and Assembly4), part_primitives_guide (Part primitives and boolean ops), fem_workflow (FEM stress analysis), asset_creation_strategy (general overview).\n\n"
         "Tool groups:\n"
         "- Document/object management: create_document, list_documents, get_objects, get_object, create_object, edit_object, delete_object, get_freecad_status\n"
-        "- Sketch workflow: create_datum_plane, add_datum_plane_to_body, create_sketch_on_plane, create_sketch_in_body, add_contour_to_sketch, extrude_sketch_bidirectional, pocket_sketch, attach_solid_to_plane\n"
+        "- Sketch workflow: create_datum_plane, add_datum_plane_to_body, create_sketch_on_plane, create_sketch_in_body, create_sketch_on_face, add_contour_to_sketch, extrude_sketch_bidirectional, pocket_sketch, attach_solid_to_plane\n"
         "- Boolean operations: boolean_union, boolean_cut, boolean_intersection\n"
         "- Advanced modeling: create_loft, create_revolve, create_sweep, create_spline_3d, add_fillet, add_chamfer, shell_object, mirror_object, circular_pattern, linear_pattern, create_reference_plane, create_reference_axis, import_airfoil_profile, import_dxf\n"
         "- Assembly: create_assembly3, create_assembly4 and related tools\n"
@@ -1202,6 +1203,51 @@ def create_sketch_in_body(
     """
     freecad = get_freecad_connection()
     return _create_sketch_in_body(ctx, freecad, add_screenshot_if_available, doc_name, body_name, plane_name)
+
+
+@mcp.tool()
+@_log_tool
+def create_sketch_on_face(
+    ctx: Context,
+    doc_name: str,
+    body_name: str,
+    obj_name: str,
+    face_name: str,
+    sketch_name: str | None = None,
+) -> list[TextContent | ImageContent]:
+    """Create a sketch attached directly to a planar face of an existing solid.
+
+    This is the most common PartDesign workflow: extrude a base solid, then sketch
+    on one of its faces to add a pocket, boss, or other feature — without needing an
+    intermediate datum plane.
+
+    The face must be planar. Call get_shape_topology first to discover valid face
+    names — 'Face1', 'Face3' etc. are dynamic and change after boolean operations.
+
+    The sketch is created inside body_name so subsequent extrude_sketch_bidirectional
+    or pocket_sketch operations remain in the same PartDesign feature tree.
+
+    Args:
+        doc_name: Document name
+        body_name: Name of the PartDesign::Body to create the sketch inside
+        obj_name: Name of the object whose face to sketch on
+        face_name: Face name from get_shape_topology (e.g. 'Face3')
+        sketch_name: Optional explicit name (default: '{obj_name}_{face_name}_sketch')
+
+    Returns:
+        Confirmation message and screenshot
+
+    Example:
+        {
+            "doc_name": "MyDocument",
+            "body_name": "Holder",
+            "obj_name": "FlangeBase",
+            "face_name": "Face6",
+            "sketch_name": "BoreProfile"
+        }
+    """
+    freecad = get_freecad_connection()
+    return _create_sketch_on_face(ctx, freecad, add_screenshot_if_available, doc_name, body_name, obj_name, face_name, sketch_name)
 
 
 @mcp.tool()
