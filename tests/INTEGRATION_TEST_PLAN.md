@@ -45,13 +45,16 @@ Each area has its own focused test plan. Start here to find the right document.
 
 | # | Tool | Symptom | Root Cause | Status |
 |---|------|---------|------------|--------|
-| 1 | `get_objects` | `string indices must be integers, not 'str'` | `serialize_view_object` raised AttributeError; caught as string by `process_gui_tasks` | Fixed 2026-05-10 — needs retest |
-| 2 | `add_contour_to_sketch` | `name 'constraints' is not defined` | Double-brace escaping in f-string left `{len(constraints)}` in exec'd code | Fixed 2026-05-10 — needs retest |
-| 3 | `extrude_sketch_bidirectional` | "Sketch is not in a Body" | Sketch created outside a Body container | Returns helpful error; use `create_datum_plane` workflow |
-| 4 | `create_loft`, `create_revolve`, `create_sweep`, `create_spline_3d` | Pydantic validation error on mixed TextContent + ImageContent response | Response type mismatch in advanced modeling tools | Open |
-| 5 | `shell_object` | `'Part.Feature' object has no attribute 'Base'` | `Part::Thickness` not supported via `addObject()` in this FreeCAD version | Open |
-| 6 | Draft:: types in `create_object` | "not a document object type" | Draft objects require Draft API, not `addObject` | By design — use `execute_code` + `Draft.makeX()` |
+| 1 | `get_objects` | `string indices must be integers, not 'str'` | `serialize_view_object` raised AttributeError; caught as string by `process_gui_tasks` | Fixed — retested ✅ 2026-05-10 |
+| 2 | `add_contour_to_sketch` | `name 'constraints' is not defined` | Double-brace escaping in f-string left `{len(constraints)}` in exec'd code | Fixed — retested ✅ 2026-05-10 |
+| 3 | `extrude_sketch_bidirectional` | "Sketch is not in a Body" | `sketch.getParentGroup()` returns None; falls back to body search | Fixed — retested ✅ 2026-05-10 |
+| 4 | `create_loft`, `create_revolve`, `create_sweep`, `create_spline_3d` | Pydantic validation error on mixed TextContent + ImageContent response | Response type mismatch in advanced modeling tools | Fixed — retested ✅ 2026-05-10 |
+| 5 | `shell_object` | `'Part.Feature' object has no attribute 'Base'` | `Part::Thickness` not supported via `addObject()` in this FreeCAD version | Fixed — retested ✅ 2026-05-10 |
+| 6 | Draft:: types in `create_object` | "not a document object type" | Draft objects require Draft API, not `addObject` | Fixed — retested ✅ 2026-05-10 |
 | 7 | `execute_code` output | `FreeCAD.Console.PrintMessage` not captured | Output goes to FreeCAD internal console, not stdout | By design — use `print()` instead |
+| 8 | `create_document`, `create_object`, `edit_object`, `delete_object`, `execute_code`, `insert_part_from_library` | `isError=True` on success | Success path raised `Exception("... successfully")` instead of returning TextContent | Fixed — retested ✅ 2026-05-10 |
+| 9 | `Part::Tube` via `create_object` | "not a document object type" | `Part::Tube` does not exist; use `create_tube` tool instead | By design — use dedicated `create_tube` tool |
+| 10 | `add_assembly3_constraint` | `No module named 'asm3'` | Assembly3 workbench not installed in this environment | Environment — install Assembly3 addon |
 
 ---
 

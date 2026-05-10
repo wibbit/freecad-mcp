@@ -56,6 +56,11 @@ else:
         print("ERROR: Sketch '{sketch_name}' not found")
     else:
         body = sketch.getParentGroup()
+        if not body or 'Body' not in body.TypeId:
+            for obj in doc.Objects:
+                if 'Body' in obj.TypeId and hasattr(obj, 'Group') and sketch in obj.Group:
+                    body = obj
+                    break
         if not body:
             print("ERROR: Sketch '{sketch_name}' is not in a Body")
         else:
