@@ -410,7 +410,12 @@ class FreeCADRPC:
         def task():
             try:
                 with contextlib.redirect_stdout(stdout_buf), contextlib.redirect_stderr(stderr_buf):
-                    exec(code, globals())
+                    sandbox = {
+                        "__builtins__": __builtins__,
+                        "FreeCAD": FreeCAD,
+                        "FreeCADGui": FreeCADGui,
+                    }
+                    exec(code, sandbox)
                 FreeCAD.Console.PrintMessage("Python code executed successfully.\n")
                 return True
             except Exception:
@@ -436,62 +441,16 @@ class FreeCADRPC:
             }
 
     def get_objects(self, doc_name):
-        try:
-            doc = FreeCAD.getDocument(doc_name)
-        except NameError:
-            open_docs = list(FreeCAD.listDocuments().keys())
-            return {"success": False, "data": None, "error": f"Document '{doc_name}' not found. Open documents: {open_docs}"}
-        return {"success": True, "data": [serialize_object(obj) for obj in doc.Objects], "error": None}
+        rpc_request_queue.put(lambda: self._get_objects_gui(doc_name))
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
 
     def get_object(self, doc_name, obj_name):
-        try:
-            doc = FreeCAD.getDocument(doc_name)
-        except NameError:
-            open_docs = list(FreeCAD.listDocuments().keys())
-            return {"success": False, "data": None, "error": f"Document '{doc_name}' not found. Open documents: {open_docs}"}
-        obj = doc.getObject(obj_name)
-        if not obj:
-            available = [o.Name for o in doc.Objects]
-            return {"success": False, "data": None, "error": f"Object '{obj_name}' not found in '{doc_name}'. Available: {available}"}
-        return {"success": True, "data": serialize_object(obj), "error": None}
+        rpc_request_queue.put(lambda: self._get_object_gui(doc_name, obj_name))
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
 
     def get_status(self) -> dict:
-        try:
-            open_docs = list(FreeCAD.listDocuments().keys())
-            active_doc = None
-            active_workbench = None
-            active_body = None
-
-            if FreeCAD.ActiveDocument:
-                active_doc = FreeCAD.ActiveDocument.Name
-
-            try:
-                active_workbench = FreeCADGui.activeWorkbench().name()
-            except Exception:
-                pass
-
-            try:
-                import PartDesignGui
-                body = PartDesignGui.getBody(False)
-                if body:
-                    active_body = body.Name
-            except Exception:
-                pass
-
-            return {
-                "success": True,
-                "data": {
-                    "active_document": active_doc,
-                    "open_documents": open_docs,
-                    "active_workbench": active_workbench,
-                    "active_body": active_body,
-                    "rpc_port": 9875,
-                    "timer_chain": "running",
-                },
-                "error": None,
-            }
-        except Exception as e:
-            return {"success": False, "data": None, "error": str(e)}
+        rpc_request_queue.put(lambda: self._get_status_gui())
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
 
     def insert_part_from_library(self, relative_path):
         rpc_request_queue.put(lambda: self._insert_part_from_library(relative_path))
@@ -501,11 +460,62 @@ class FreeCADRPC:
         else:
             return {"success": False, "data": None, "error": res}
 
+    def get_shape_topology(self, doc_name: str, obj_name: str) -> dict:
+        rpc_request_queue.put(lambda: self._get_shape_topology_gui(doc_name, obj_name))
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
+
+    def save_document(self, doc_name: str, path: str = "") -> dict:
+        rpc_request_queue.put(lambda: self._save_document_gui(doc_name, path))
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
+
+    def load_document(self, path: str) -> dict:
+        rpc_request_queue.put(lambda: self._load_document_gui(path))
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
+
+    def measure_object(self, doc_name: str, obj_name: str) -> dict:
+        rpc_request_queue.put(lambda: self._measure_object_gui(doc_name, obj_name))
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
+
+    def set_object_visibility(self, doc_name: str, obj_name: str, visible: bool) -> dict:
+        rpc_request_queue.put(lambda: self._set_object_visibility_gui(doc_name, obj_name, visible))
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
+
+    def undo(self, doc_name: str, steps: int = 1) -> dict:
+        rpc_request_queue.put(lambda: self._undo_gui(doc_name, steps))
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
+
+    def export_object(self, doc_name: str, obj_name: str, path: str, export_format: str) -> dict:
+        rpc_request_queue.put(lambda: self._export_object_gui(doc_name, obj_name, path, export_format))
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
+
+    def spreadsheet_read(self, doc_name: str, sheet_name: str, cell_range: str) -> dict:
+        rpc_request_queue.put(lambda: self._spreadsheet_read_gui(doc_name, sheet_name, cell_range))
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
+
+    def spreadsheet_write(self, doc_name: str, sheet_name: str, cell: str, value) -> dict:
+        rpc_request_queue.put(lambda: self._spreadsheet_write_gui(doc_name, sheet_name, cell, value))
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
+
+    def copy_object(self, doc_name: str, obj_name: str, new_name: str) -> dict:
+        rpc_request_queue.put(lambda: self._copy_object_gui(doc_name, obj_name, new_name))
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
+
+    def create_techdraw_page(self, doc_name: str, page_name: str, template_path: str = "") -> dict:
+        rpc_request_queue.put(lambda: self._create_techdraw_page_gui(doc_name, page_name, template_path))
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
+
+    def add_view_to_techdraw_page(self, doc_name: str, page_name: str, obj_name: str, view_name: str, x: float = 100.0, y: float = 100.0, scale: float = 1.0) -> dict:
+        rpc_request_queue.put(lambda: self._add_view_to_techdraw_page_gui(doc_name, page_name, obj_name, view_name, x, y, scale))
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
+
     def list_documents(self):
         return {"success": True, "data": list(FreeCAD.listDocuments().keys()), "error": None}
 
     def get_parts_list(self):
-        return {"success": True, "data": get_parts_list(), "error": None}
+        try:
+            return {"success": True, "data": get_parts_list(), "error": None}
+        except Exception as e:
+            return {"success": False, "data": None, "error": str(e)}
 
     def get_active_screenshot(self, view_name: str = "Isometric", width: int | None = None, height: int | None = None, focus_object: str | None = None) -> str:
         """Get a screenshot of the active view.
@@ -769,9 +779,399 @@ class FreeCADRPC:
     def _insert_part_from_library(self, relative_path):
         try:
             insert_part_from_library(relative_path)
+            if FreeCAD.ActiveDocument:
+                FreeCAD.ActiveDocument.recompute()
             return True
         except Exception as e:
             return str(e)
+
+    def _get_shape_topology_gui(self, doc_name: str, obj_name: str) -> dict:
+        try:
+            doc = FreeCAD.getDocument(doc_name)
+            if not doc:
+                open_docs = list(FreeCAD.listDocuments().keys())
+                return {"success": False, "data": None, "error": f"Document '{doc_name}' not found. Open documents: {open_docs}"}
+            obj = doc.getObject(obj_name)
+            if not obj:
+                available = [o.Name for o in doc.Objects]
+                return {"success": False, "data": None, "error": f"Object '{obj_name}' not found in '{doc_name}'. Available: {available}"}
+            if not hasattr(obj, "Shape") or obj.Shape.isNull():
+                return {"success": False, "data": None, "error": f"Object '{obj_name}' has no valid shape. It may need to be recomputed."}
+
+            shape = obj.Shape
+
+            faces = []
+            for i, face in enumerate(shape.Faces):
+                try:
+                    com = face.CenterOfMass
+                    centroid = {"x": com.x, "y": com.y, "z": com.z}
+                    try:
+                        normal = face.normalAt(0, 0)
+                        normal_dict = {"x": round(normal.x, 6), "y": round(normal.y, 6), "z": round(normal.z, 6)}
+                    except Exception:
+                        normal_dict = None
+                    faces.append({
+                        "name": f"Face{i + 1}",
+                        "index": i + 1,
+                        "area": round(face.Area, 4),
+                        "normal": normal_dict,
+                        "centroid": {k: round(v, 4) for k, v in centroid.items()},
+                    })
+                except Exception as e:
+                    faces.append({"name": f"Face{i + 1}", "index": i + 1, "error": str(e)})
+
+            edges = []
+            for i, edge in enumerate(shape.Edges):
+                try:
+                    curve_type = type(edge.Curve).__name__
+                    edges.append({
+                        "name": f"Edge{i + 1}",
+                        "index": i + 1,
+                        "length": round(edge.Length, 4),
+                        "curve_type": curve_type,
+                    })
+                except Exception as e:
+                    edges.append({"name": f"Edge{i + 1}", "index": i + 1, "error": str(e)})
+
+            vertices = []
+            for i, vtx in enumerate(shape.Vertexes):
+                vertices.append({
+                    "name": f"Vertex{i + 1}",
+                    "index": i + 1,
+                    "x": round(vtx.X, 4),
+                    "y": round(vtx.Y, 4),
+                    "z": round(vtx.Z, 4),
+                })
+
+            return {
+                "success": True,
+                "data": {
+                    "object": obj_name,
+                    "document": doc_name,
+                    "face_count": len(faces),
+                    "edge_count": len(edges),
+                    "vertex_count": len(vertices),
+                    "faces": faces,
+                    "edges": edges,
+                    "vertices": vertices,
+                },
+                "error": None,
+            }
+        except Exception as e:
+            import traceback
+            return {"success": False, "data": None, "error": f"{type(e).__name__}: {e}\n{traceback.format_exc()}"}
+
+    def _save_document_gui(self, doc_name: str, path: str) -> dict:
+        try:
+            doc = FreeCAD.getDocument(doc_name)
+            if not doc:
+                open_docs = list(FreeCAD.listDocuments().keys())
+                return {"success": False, "data": None, "error": f"Document '{doc_name}' not found. Open documents: {open_docs}"}
+            if path:
+                doc.saveAs(path)
+                saved_path = path
+            else:
+                if not doc.FileName:
+                    return {"success": False, "data": None, "error": f"Document '{doc_name}' has never been saved. Provide a path to save it for the first time."}
+                doc.save()
+                saved_path = doc.FileName
+            return {"success": True, "data": {"document": doc_name, "path": saved_path}, "error": None}
+        except Exception as e:
+            return {"success": False, "data": None, "error": f"{type(e).__name__}: {e}"}
+
+    def _load_document_gui(self, path: str) -> dict:
+        try:
+            doc = FreeCAD.open(path)
+            if doc is None:
+                return {"success": False, "data": None, "error": f"FreeCAD.open() returned None for path: {path}"}
+            return {"success": True, "data": {"document": doc.Name, "path": path}, "error": None}
+        except Exception as e:
+            return {"success": False, "data": None, "error": f"{type(e).__name__}: {e}"}
+
+    def _measure_object_gui(self, doc_name: str, obj_name: str) -> dict:
+        try:
+            doc = FreeCAD.getDocument(doc_name)
+            if not doc:
+                open_docs = list(FreeCAD.listDocuments().keys())
+                return {"success": False, "data": None, "error": f"Document '{doc_name}' not found. Open documents: {open_docs}"}
+            obj = doc.getObject(obj_name)
+            if not obj:
+                available = [o.Name for o in doc.Objects]
+                return {"success": False, "data": None, "error": f"Object '{obj_name}' not found in '{doc_name}'. Available: {available}"}
+            if not hasattr(obj, "Shape") or obj.Shape.isNull():
+                return {"success": False, "data": None, "error": f"Object '{obj_name}' has no valid shape."}
+
+            shape = obj.Shape
+            bb = shape.BoundBox
+
+            data = {
+                "object": obj_name,
+                "document": doc_name,
+                "bounding_box": {
+                    "x_min": round(bb.XMin, 4), "x_max": round(bb.XMax, 4),
+                    "y_min": round(bb.YMin, 4), "y_max": round(bb.YMax, 4),
+                    "z_min": round(bb.ZMin, 4), "z_max": round(bb.ZMax, 4),
+                    "x_size": round(bb.XLength, 4),
+                    "y_size": round(bb.YLength, 4),
+                    "z_size": round(bb.ZLength, 4),
+                },
+                "volume": round(shape.Volume, 4),
+                "surface_area": round(shape.Area, 4),
+            }
+
+            try:
+                com = shape.CenterOfMass
+                data["center_of_mass"] = {"x": round(com.x, 4), "y": round(com.y, 4), "z": round(com.z, 4)}
+            except Exception:
+                data["center_of_mass"] = None
+
+            return {"success": True, "data": data, "error": None}
+        except Exception as e:
+            return {"success": False, "data": None, "error": f"{type(e).__name__}: {e}"}
+
+    def _set_object_visibility_gui(self, doc_name: str, obj_name: str, visible: bool) -> dict:
+        try:
+            doc = FreeCAD.getDocument(doc_name)
+            if not doc:
+                return {"success": False, "data": None, "error": f"Document '{doc_name}' not found"}
+            obj = doc.getObject(obj_name)
+            if not obj:
+                return {"success": False, "data": None, "error": f"Object '{obj_name}' not found"}
+            obj.ViewObject.Visibility = visible
+            return {"success": True, "data": {"obj_name": obj_name, "visible": visible}, "error": None}
+        except Exception as e:
+            return {"success": False, "data": None, "error": f"{type(e).__name__}: {e}"}
+
+    def _undo_gui(self, doc_name: str, steps: int = 1) -> dict:
+        try:
+            doc = FreeCAD.getDocument(doc_name)
+            if not doc:
+                return {"success": False, "data": None, "error": f"Document '{doc_name}' not found"}
+            if not doc.UndoMode:
+                return {"success": False, "data": None,
+                        "error": "Undo not enabled on this document. Documents must be opened via the FreeCAD GUI to enable undo tracking."}
+            for _ in range(steps):
+                doc.undo()
+            return {"success": True, "data": {"steps_undone": steps}, "error": None}
+        except Exception as e:
+            return {"success": False, "data": None, "error": f"{type(e).__name__}: {e}"}
+
+    def _export_object_gui(self, doc_name: str, obj_name: str, path: str, export_format: str) -> dict:
+        try:
+            doc = FreeCAD.getDocument(doc_name)
+            if not doc:
+                return {"success": False, "data": None, "error": f"Document '{doc_name}' not found"}
+            obj = doc.getObject(obj_name)
+            if not obj:
+                return {"success": False, "data": None, "error": f"Object '{obj_name}' not found"}
+            fmt = export_format.lower()
+            import os
+            ext_map = {"step": ".step", "iges": ".iges", "stl": ".stl", "obj": ".obj"}
+            expected_ext = ext_map.get(fmt, "")
+            _, actual_ext = os.path.splitext(path)
+            if actual_ext.lower() != expected_ext:
+                path = os.path.splitext(path)[0] + expected_ext
+            if fmt in ("step", "iges"):
+                import Part
+                Part.export([obj], path)
+            elif fmt in ("stl", "obj"):
+                import Mesh
+                Mesh.export([obj], path)
+            else:
+                return {"success": False, "data": None, "error": f"Unsupported format '{export_format}'. Use: step, stl, obj, iges"}
+            return {"success": True, "data": {"path": path, "format": export_format}, "error": None}
+        except Exception as e:
+            return {"success": False, "data": None, "error": f"{type(e).__name__}: {e}"}
+
+    @staticmethod
+    def _read_cell(sheet, addr: str):
+        """Read a spreadsheet cell, returning the computed value.
+
+        Tries sheet.get() first (returns evaluated quantity/float/str).
+        Falls back to sheet.getContents() for older FreeCAD versions.
+        Unwraps FreeCAD Quantity objects to their numeric Value.
+        """
+        try:
+            val = sheet.get(addr)
+        except AttributeError:
+            val = sheet.getContents(addr)
+        if hasattr(val, "Value"):
+            val = val.Value
+        return val
+
+    def _spreadsheet_read_gui(self, doc_name: str, sheet_name: str, cell_range: str) -> dict:
+        try:
+            doc = FreeCAD.getDocument(doc_name)
+            if not doc:
+                return {"success": False, "data": None, "error": f"Document '{doc_name}' not found"}
+            sheet = doc.getObject(sheet_name)
+            if not sheet:
+                return {"success": False, "data": None, "error": f"Sheet '{sheet_name}' not found"}
+            cells = {}
+            if ":" in cell_range:
+                start, end = cell_range.split(":", 1)
+                # Parse column letters and row numbers
+                import re
+                def parse_cell(c):
+                    m = re.match(r"([A-Za-z]+)(\d+)", c.strip())
+                    if not m:
+                        raise ValueError(f"Invalid cell address: {c}")
+                    return m.group(1).upper(), int(m.group(2))
+                start_col, start_row = parse_cell(start)
+                end_col, end_row = parse_cell(end)
+                # Convert column letters to indices
+                def col_to_idx(col):
+                    idx = 0
+                    for ch in col:
+                        idx = idx * 26 + (ord(ch) - ord('A') + 1)
+                    return idx
+                def idx_to_col(idx):
+                    result = ""
+                    while idx > 0:
+                        idx, rem = divmod(idx - 1, 26)
+                        result = chr(ord('A') + rem) + result
+                    return result
+                sc = col_to_idx(start_col)
+                ec = col_to_idx(end_col)
+                for r in range(start_row, end_row + 1):
+                    for c in range(sc, ec + 1):
+                        addr = f"{idx_to_col(c)}{r}"
+                        try:
+                            cells[addr] = self._read_cell(sheet, addr)
+                        except Exception:
+                            cells[addr] = None
+            else:
+                addr = cell_range.strip().upper()
+                try:
+                    cells[addr] = self._read_cell(sheet, addr)
+                except Exception:
+                    cells[addr] = None
+            return {"success": True, "data": {"cells": cells}, "error": None}
+        except Exception as e:
+            return {"success": False, "data": None, "error": f"{type(e).__name__}: {e}"}
+
+    def _spreadsheet_write_gui(self, doc_name: str, sheet_name: str, cell: str, value) -> dict:
+        try:
+            doc = FreeCAD.getDocument(doc_name)
+            if not doc:
+                return {"success": False, "data": None, "error": f"Document '{doc_name}' not found"}
+            sheet = doc.getObject(sheet_name)
+            if not sheet:
+                return {"success": False, "data": None, "error": f"Sheet '{sheet_name}' not found"}
+            sheet.set(cell, str(value))
+            sheet.recompute()
+            doc.recompute()
+            return {"success": True, "data": {"cell": cell, "value": value}, "error": None}
+        except Exception as e:
+            return {"success": False, "data": None, "error": f"{type(e).__name__}: {e}"}
+
+    def _copy_object_gui(self, doc_name: str, obj_name: str, new_name: str) -> dict:
+        try:
+            doc = FreeCAD.getDocument(doc_name)
+            if not doc:
+                return {"success": False, "data": None, "error": f"Document '{doc_name}' not found"}
+            obj = doc.getObject(obj_name)
+            if not obj:
+                return {"success": False, "data": None, "error": f"Object '{obj_name}' not found"}
+            new_obj = doc.copyObject(obj, True)
+            new_obj.Label = new_name
+            doc.recompute()
+            return {"success": True, "data": {"original": obj_name, "copy": new_obj.Name, "label": new_name}, "error": None}
+        except Exception as e:
+            return {"success": False, "data": None, "error": f"{type(e).__name__}: {e}"}
+
+    def _create_techdraw_page_gui(self, doc_name: str, page_name: str, template_path: str = "") -> dict:
+        try:
+            doc = FreeCAD.getDocument(doc_name)
+            if not doc:
+                return {"success": False, "data": None, "error": f"Document '{doc_name}' not found"}
+            page = doc.addObject("TechDraw::DrawPage", page_name)
+            if template_path:
+                template = doc.addObject("TechDraw::DrawSVGTemplate", page_name + "_template")
+                template.Template = template_path
+                page.Template = template
+            doc.recompute()
+            return {"success": True, "data": {"page_name": page.Name, "label": page_name}, "error": None}
+        except Exception as e:
+            return {"success": False, "data": None, "error": f"{type(e).__name__}: {e}"}
+
+    def _add_view_to_techdraw_page_gui(self, doc_name: str, page_name: str, obj_name: str, view_name: str, x: float = 100.0, y: float = 100.0, scale: float = 1.0) -> dict:
+        try:
+            doc = FreeCAD.getDocument(doc_name)
+            if not doc:
+                return {"success": False, "data": None, "error": f"Document '{doc_name}' not found"}
+            page = doc.getObject(page_name)
+            if not page:
+                return {"success": False, "data": None, "error": f"Page '{page_name}' not found"}
+            obj = doc.getObject(obj_name)
+            if not obj:
+                return {"success": False, "data": None, "error": f"Object '{obj_name}' not found"}
+            view = doc.addObject("TechDraw::DrawViewPart", view_name)
+            view.Source = [obj]
+            view.X = x
+            view.Y = y
+            view.Scale = scale
+            page.addView(view)
+            doc.recompute()
+            return {"success": True, "data": {"view_name": view.Name, "page": page_name, "object": obj_name}, "error": None}
+        except Exception as e:
+            return {"success": False, "data": None, "error": f"{type(e).__name__}: {e}"}
+
+    def _get_objects_gui(self, doc_name):
+        doc = FreeCAD.getDocument(doc_name)
+        if doc is None:
+            open_docs = list(FreeCAD.listDocuments().keys())
+            return {"success": False, "data": None, "error": f"Document '{doc_name}' not found. Open documents: {open_docs}"}
+        return {"success": True, "data": [serialize_object(obj) for obj in doc.Objects], "error": None}
+
+    def _get_object_gui(self, doc_name, obj_name):
+        doc = FreeCAD.getDocument(doc_name)
+        if doc is None:
+            open_docs = list(FreeCAD.listDocuments().keys())
+            return {"success": False, "data": None, "error": f"Document '{doc_name}' not found. Open documents: {open_docs}"}
+        obj = doc.getObject(obj_name)
+        if not obj:
+            available = [o.Name for o in doc.Objects]
+            return {"success": False, "data": None, "error": f"Object '{obj_name}' not found in '{doc_name}'. Available: {available}"}
+        return {"success": True, "data": serialize_object(obj), "error": None}
+
+    def _get_status_gui(self) -> dict:
+        try:
+            open_docs = list(FreeCAD.listDocuments().keys())
+            active_doc = None
+            active_workbench = None
+            active_body = None
+
+            if FreeCAD.ActiveDocument:
+                active_doc = FreeCAD.ActiveDocument.Name
+
+            try:
+                active_workbench = FreeCADGui.activeWorkbench().name()
+            except Exception:
+                pass
+
+            try:
+                import PartDesignGui
+                body = PartDesignGui.getBody(False)
+                if body:
+                    active_body = body.Name
+            except Exception:
+                pass
+
+            return {
+                "success": True,
+                "data": {
+                    "active_document": active_doc,
+                    "open_documents": open_docs,
+                    "active_workbench": active_workbench,
+                    "active_body": active_body,
+                    "rpc_port": 9875,
+                    "timer_chain": "running",
+                },
+                "error": None,
+            }
+        except Exception as e:
+            return {"success": False, "data": None, "error": str(e)}
 
     def _save_active_screenshot(
         self,

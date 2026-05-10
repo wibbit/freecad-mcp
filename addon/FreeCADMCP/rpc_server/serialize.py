@@ -39,12 +39,22 @@ def serialize_value(value):
 def serialize_shape(shape):
     if shape is None:
         return None
+    try:
+        bb = shape.BoundBox
+        bound_box = {
+            "XMin": round(bb.XMin, 4), "XMax": round(bb.XMax, 4),
+            "YMin": round(bb.YMin, 4), "YMax": round(bb.YMax, 4),
+            "ZMin": round(bb.ZMin, 4), "ZMax": round(bb.ZMax, 4),
+        }
+    except Exception:
+        bound_box = None
     return {
         "Volume": shape.Volume,
         "Area": shape.Area,
         "VertexCount": len(shape.Vertexes),
         "EdgeCount": len(shape.Edges),
         "FaceCount": len(shape.Faces),
+        "BoundBox": bound_box,
     }
 
 
