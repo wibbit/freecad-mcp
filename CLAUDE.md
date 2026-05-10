@@ -8,3 +8,22 @@ Full operational documentation lives in `docs/`:
 - **`docs/errors_and_workarounds.md`** — error index by symptom with log guidance and grep patterns
 
 Start every session by reading `docs/session_guide.md`.
+
+---
+
+## Development Rules
+
+**Update docs and tests alongside every change — not at the end.**
+
+For every bug fix:
+- Add an entry to `docs/errors_and_workarounds.md` (symptom → cause → fix → log to check).
+- Add the bug to the Known Bugs table in `tests/INTEGRATION_TEST_PLAN.md` with status "Fixed".
+- If the fix corrects a gotcha or API misuse, add or update the relevant entry in `docs/api_gotchas.md`.
+
+For every new tool or feature:
+- Add the tool to `docs/API_REFERENCE.md` with signature, parameters, and a JSON example.
+- Add test cases to the appropriate `tests/test_plans/*.md` file.
+- Add an entry to the `[Unreleased]` section of `CHANGELOG.md`.
+- If the feature introduces new workflow order requirements, update `docs/session_guide.md`.
+
+Commit doc and test updates in the same commit as the code change, or immediately after it.
