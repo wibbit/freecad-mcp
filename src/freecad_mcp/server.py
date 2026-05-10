@@ -37,6 +37,7 @@ from .sketch_tools.plane_manager import create_datum_plane as _create_datum_plan
 from .sketch_tools.sketch_manager import create_sketch_on_plane as _create_sketch_on_plane
 from .sketch_tools.contour_builder import add_contour_to_sketch as _add_contour_to_sketch
 from .sketch_tools.extrude_manager import extrude_sketch_bidirectional as _extrude_sketch_bidirectional
+from .sketch_tools.pocket_manager import pocket_sketch as _pocket_sketch
 from .sketch_tools.attachment_manager import attach_solid_to_plane as _attach_solid_to_plane
 from .sketch_tools.boolean_operations import (
     boolean_union as _boolean_union,
@@ -183,7 +184,7 @@ mcp = FastMCP(
         "3. Read the relevant workflow prompt before any multi-step task: session_startup_guide_prompt (session checklist), sketch_workflow (sketch-to-solid), boolean_operations_guide (combining/subtracting solids), assembly_guide (Assembly3 and Assembly4), part_primitives_guide (Part primitives and boolean ops), fem_workflow (FEM stress analysis), asset_creation_strategy (general overview).\n\n"
         "Tool groups:\n"
         "- Document/object management: create_document, list_documents, get_objects, get_object, create_object, edit_object, delete_object, get_freecad_status\n"
-        "- Sketch workflow: create_datum_plane, create_sketch_on_plane, add_contour_to_sketch, extrude_sketch_bidirectional, attach_solid_to_plane\n"
+        "- Sketch workflow: create_datum_plane, create_sketch_on_plane, add_contour_to_sketch, extrude_sketch_bidirectional, pocket_sketch, attach_solid_to_plane\n"
         "- Boolean operations: boolean_union, boolean_cut, boolean_intersection\n"
         "- Advanced modeling: create_loft, create_revolve, create_sweep, create_spline_3d, add_fillet, add_chamfer, shell_object, mirror_object, circular_pattern, linear_pattern, create_reference_plane, create_reference_axis, import_airfoil_profile, import_dxf\n"
         "- Assembly: create_assembly3, create_assembly4 and related tools\n"
@@ -1217,6 +1218,47 @@ def extrude_sketch_bidirectional(
     """
     freecad = get_freecad_connection()
     return _extrude_sketch_bidirectional(ctx, freecad, add_screenshot_if_available, doc_name, sketch_name, length_forward, length_backward, use_midplane)
+
+
+@mcp.tool()
+@_log_tool
+def pocket_sketch(
+    ctx: Context,
+    doc_name: str,
+    sketch_name: str,
+    depth: float,
+    depth2: float = 0.0,
+    through_all: bool = False,
+    symmetric: bool = False,
+) -> list[TextContent | ImageContent]:
+    """Cut a pocket into a PartDesign Body using a sketch profile (subtractive extrusion).
+
+    The sketch must already exist inside a PartDesign Body — use create_datum_plane and
+    create_sketch_on_plane to set this up, then draw the pocket profile with add_contour_to_sketch.
+    The pocket is automatically named by replacing '_sketch' with '_pocket' in the sketch name.
+
+    Args:
+        doc_name: Document name
+        sketch_name: Sketch name defining the pocket profile
+        depth: Depth of the pocket in mm
+        depth2: Second depth for two-sided pockets (default: 0.0)
+        through_all: If True, cut through the entire solid — depth is ignored (default: False)
+        symmetric: If True, cut symmetrically about the sketch plane (default: False)
+
+    Returns:
+        Confirmation message and screenshot
+
+    Example:
+        {
+            "doc_name": "MyDocument",
+            "sketch_name": "slot_sketch",
+            "depth": 10.0
+        }
+
+        This creates: "slot_pocket"
+    """
+    freecad = get_freecad_connection()
+    return _pocket_sketch(ctx, freecad, add_screenshot_if_available, doc_name, sketch_name, depth, depth2, through_all, symmetric)
 
 
 @mcp.tool()
