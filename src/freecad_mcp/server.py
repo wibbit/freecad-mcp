@@ -2204,7 +2204,7 @@ def session_startup_guide_prompt() -> str:
 
 @mcp.tool()
 @_log_tool
-def create_loft(ctx: Context, doc_name: str, sketch_names: list[str], result_name: str | None = None, solid: bool = True, ruled: bool = False) -> list[TextContent]:
+def create_loft(ctx: Context, doc_name: str, sketch_names: list[str], result_name: str | None = None, solid: bool = True, ruled: bool = False) -> list[TextContent | ImageContent]:
     """Create a loft (swept solid) through two or more existing closed sketch profiles.
 
     Prerequisite: all sketches in sketch_names must already exist in the document and be closed profiles. Use create_sketch_on_plane and add_contour_to_sketch to create each profile first. See the sketch_workflow prompt.
@@ -2218,7 +2218,7 @@ def create_loft(ctx: Context, doc_name: str, sketch_names: list[str], result_nam
 
 @mcp.tool()
 @_log_tool
-def create_revolve(ctx: Context, doc_name: str, sketch_name: str, axis: dict[str, dict[str, float]], angle: float = 360.0, result_name: str | None = None) -> list[TextContent]:
+def create_revolve(ctx: Context, doc_name: str, sketch_name: str, axis: dict[str, dict[str, float]], angle: float = 360.0, result_name: str | None = None) -> list[TextContent | ImageContent]:
     """Revolve a closed 2D sketch profile around an axis to create a solid of revolution (e.g. cylinder, cone, vase).
 
     Prerequisite: sketch_name must already exist and be a closed 2D profile. The sketch must not cross the axis of revolution.
@@ -2230,7 +2230,7 @@ def create_revolve(ctx: Context, doc_name: str, sketch_name: str, axis: dict[str
 
 @mcp.tool()
 @_log_tool
-def create_sweep(ctx: Context, doc_name: str, profile_sketch: str, path_sketch: str, result_name: str) -> list[TextContent]:
+def create_sweep(ctx: Context, doc_name: str, profile_sketch: str, path_sketch: str, result_name: str) -> list[TextContent | ImageContent]:
     """Sweep a 2D profile sketch along a path sketch to create a solid (e.g. pipe, tube, extruded curve).
 
     Prerequisite: profile_sketch must be a closed 2D profile; path_sketch must be an open or closed wire/sketch defining the sweep direction.
@@ -2241,7 +2241,7 @@ def create_sweep(ctx: Context, doc_name: str, profile_sketch: str, path_sketch: 
 
 @mcp.tool()
 @_log_tool
-def create_spline_3d(ctx: Context, doc_name: str, points: list[dict[str, float]], spline_name: str, closed: bool = False) -> list[TextContent]:
+def create_spline_3d(ctx: Context, doc_name: str, points: list[dict[str, float]], spline_name: str, closed: bool = False) -> list[TextContent | ImageContent]:
     """Create a 3D B-spline wire through a list of 3D control points.
 
     This produces a Wire object, not a solid. To create a solid from a 3D spline, use it as the path in create_sweep with a profile sketch.

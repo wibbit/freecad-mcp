@@ -195,18 +195,21 @@ elif not hasattr(obj, 'Shape') or obj.Shape.isNull():
 else:
     try:
         face_names = {face_names_repr}
-        shell = doc.addObject('Part::Thickness', '{res_name}')
-        shell.Value = {thickness}
-        shell.Join = 0
-        shell.Base = obj
-        if face_names:
-            shell.Faces = [(obj, name) for name in face_names]
-        else:
-            shell.Mode = 0
+        faces = []
+        for name in face_names:
+            if name.startswith('Face'):
+                try:
+                    faces.append(obj.Shape.Faces[int(name[4:]) - 1])
+                except (ValueError, IndexError) as e:
+                    print(f'ERROR: Invalid face name {{name}}: {{e}}')
+                    raise
+        shell_shape = obj.Shape.makeThickness(faces, {thickness}, 1e-5)
+        shell = doc.addObject('Part::Feature', '{res_name}')
+        shell.Shape = shell_shape
         doc.recompute()
         obj.ViewObject.Visibility = False
         if shell.Shape.isValid():
-            print(f'SUCCESS: Shell created with thickness {thickness}, {{len(face_names)}} face(s) removed')
+            print(f'SUCCESS: Shell created with thickness {thickness}, {{len(faces)}} face(s) removed')
         else:
             print('ERROR: Shell operation produced invalid shape')
     except Exception as e:
