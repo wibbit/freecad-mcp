@@ -17,8 +17,9 @@ Start every session by reading `docs/session_guide.md`.
 
 For every bug fix:
 - Add an entry to `docs/errors_and_workarounds.md` (symptom → cause → fix → log to check).
-- Add the bug to the Known Bugs table in `tests/INTEGRATION_TEST_PLAN.md` with status "Fixed".
+- Add an entry to the `[Unreleased]` section of `CHANGELOG.md`.
 - If the fix corrects a gotcha or API misuse, add or update the relevant entry in `docs/api_gotchas.md`.
+- Do NOT add fixed bugs to `tests/INTEGRATION_TEST_PLAN.md` Known Bugs — that table is for open issues only.
 
 For every new tool or feature:
 - Add the tool to `docs/API_REFERENCE.md` with signature, parameters, and a JSON example.

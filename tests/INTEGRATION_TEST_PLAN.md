@@ -43,24 +43,13 @@ Each area has its own focused test plan. Start here to find the right document.
 
 ## Known Bugs Summary
 
+Open issues only. Fixed bugs are recorded in `CHANGELOG.md`.
+
 | # | Tool | Symptom | Root Cause | Status |
 |---|------|---------|------------|--------|
-| 1 | `get_objects` | `string indices must be integers, not 'str'` | `serialize_view_object` raised AttributeError; caught as string by `process_gui_tasks` | Fixed — retested ✅ 2026-05-10 |
-| 2 | `add_contour_to_sketch` | `name 'constraints' is not defined` | Double-brace escaping in f-string left `{len(constraints)}` in exec'd code | Fixed — retested ✅ 2026-05-10 |
-| 3 | `extrude_sketch_bidirectional` | "Sketch is not in a Body" | `sketch.getParentGroup()` returns None; falls back to body search | Fixed — retested ✅ 2026-05-10 |
-| 4 | `create_loft`, `create_revolve`, `create_sweep`, `create_spline_3d` | Pydantic validation error on mixed TextContent + ImageContent response | Response type mismatch in advanced modeling tools | Fixed — retested ✅ 2026-05-10 |
-| 5 | `shell_object` | `'Part.Feature' object has no attribute 'Base'` | `Part::Thickness` not supported via `addObject()` in this FreeCAD version | Fixed — retested ✅ 2026-05-10 |
-| 6 | Draft:: types in `create_object` | "not a document object type" | Draft objects require Draft API, not `addObject` | Fixed — retested ✅ 2026-05-10 |
 | 7 | `execute_code` output | `FreeCAD.Console.PrintMessage` not captured | Output goes to FreeCAD internal console, not stdout | By design — use `print()` instead |
-| 8 | `create_document`, `create_object`, `edit_object`, `delete_object`, `execute_code`, `insert_part_from_library` | `isError=True` on success | Success path raised `Exception("... successfully")` instead of returning TextContent | Fixed — retested ✅ 2026-05-10 |
 | 9 | `Part::Tube` via `create_object` | "not a document object type" | `Part::Tube` does not exist; use `create_tube` tool instead | By design — use dedicated `create_tube` tool |
 | 10 | `add_assembly3_constraint` | `No module named 'asm3'` | Assembly3 workbench not installed in this environment | Environment — install Assembly3 addon |
-| 11 | `execute_code` (any) | `NameError: name 'App' is not defined` | Exec sandbox only exposed `FreeCAD`/`FreeCADGui`; `App`/`Gui` aliases not injected | Fixed 2026-05-10 — `App` and `Gui` now pre-injected in `rpc_server.py` sandbox |
-| 12 | `add_fillet`, `add_chamfer` | `Part::Fillet: Link(s) go out of allowed scope 'Body'` | `Part::Fillet`/`Part::Chamfer` cannot reference objects inside a `PartDesign::Body` | Fixed 2026-05-10 — tools auto-detect Body context, use `PartDesign::Fillet`/`Chamfer` |
-| 13 | `add_fillet`, `add_chamfer` | `'PartDesign.Feature' has no attribute 'Edges'` | `PropertyLinkSub` requires tuple for subname collection, not list | Fixed 2026-05-10 — `fillet.Base = (obj, tuple(edge_names))` |
-| 14 | `create_loft` | `Part::Loft: Link(s) go out of allowed scope` | Same Body scoping issue as fillet/chamfer | Fixed 2026-05-10 — auto-detects Body, uses `PartDesign::AdditiveLoft` |
-| 15 | `create_sketch_on_plane`, `create_sketch_in_body` | Sketch created but has wrong orientation or profile ignored | `AttachmentSupport` with empty `''` subname silently broken in FreeCAD 1.x | Fixed 2026-05-10 — uses `'Face1'` subname |
-| 16 | `pocket_sketch`, `extrude_sketch_bidirectional` | Silent no-op or wrong extrude type | Integer `pad.Type` / `pocket.Type` values ignored in FreeCAD 1.x | Fixed 2026-05-10 — string enums (`"Length"`, `"ThroughAll"`, `"TwoSides"`) used throughout |
 
 ---
 
