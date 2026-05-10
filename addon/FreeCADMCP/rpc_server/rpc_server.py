@@ -631,6 +631,47 @@ class FreeCADRPC:
                         raise ValueError(f"No creation method '{method_name}' found in ObjectsFem.")
                     if obj.type != "Fem::AnalysisPython" and obj.analysis:
                         getattr(doc, obj.analysis).addObject(res)
+                elif obj.type.startswith("Draft::"):
+                    import Draft
+                    draft_type = obj.type.split("::")[1]
+                    props = obj.properties
+
+                    if draft_type == "Circle":
+                        radius = float(props.get("Radius", 1.0))
+                        first_angle = float(props.get("FirstAngle", 0))
+                        last_angle = float(props.get("LastAngle", 360))
+                        res = Draft.makeCircle(
+                            radius,
+                            face=False,
+                            startangle=first_angle,
+                            endangle=last_angle,
+                        )
+                    elif draft_type == "Rectangle":
+                        length = float(props.get("Length", 1.0))
+                        width = float(props.get("Width", 1.0))
+                        res = Draft.makeRectangle(length, width)
+                    elif draft_type == "Wire":
+                        raw_points = props.get("Points", [])
+                        points = [
+                            FreeCAD.Vector(p["x"], p["y"], p["z"])
+                            if isinstance(p, dict)
+                            else p
+                            for p in raw_points
+                        ]
+                        res = Draft.makeWire(points)
+                    elif draft_type == "Line":
+                        start = props.get("Start", {})
+                        end = props.get("End", {})
+                        p1 = FreeCAD.Vector(start["x"], start["y"], start["z"])
+                        p2 = FreeCAD.Vector(end["x"], end["y"], end["z"])
+                        res = Draft.makeLine(p1, p2)
+                    else:
+                        raise ValueError(f"Unsupported Draft type: '{obj.type}'.")
+
+                    res.Label = obj.name
+                    FreeCAD.Console.PrintMessage(
+                        f"Draft object '{res.Name}' ({obj.type}) created in '{doc_name}'.\n"
+                    )
                 else:
                     res = doc.addObject(obj.type, obj.name)
                     set_object_property(doc, res, obj.properties)

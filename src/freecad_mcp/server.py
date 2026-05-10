@@ -12,6 +12,7 @@ from .operations import (
     run_fem_analysis_operation,
 )
 from .prompt_text import ASSET_CREATION_STRATEGY
+from .responses import parse_execute_result
 from .server_state import ServerState
 
 from .modeling_tools import (
@@ -2250,6 +2251,77 @@ def create_spline_3d(ctx: Context, doc_name: str, points: list[dict[str, float]]
     """
     freecad = get_freecad_connection()
     return _create_spline_3d(ctx, freecad, add_screenshot_if_available, doc_name, points, spline_name, closed)
+
+@mcp.tool()
+@_log_tool
+def create_tube(
+    ctx: Context,
+    doc_name: str,
+    tube_name: str,
+    outer_radius: float,
+    inner_radius: float,
+    height: float,
+) -> list[TextContent | ImageContent]:
+    """Create a hollow cylinder (tube) by subtracting an inner cylinder from an outer cylinder.
+
+    FreeCAD has no native Part::Tube object, so this tool builds the shape from two
+    Part.makeCylinder calls and a boolean cut, then stores the result as a Part::Feature.
+
+    Args:
+        doc_name: Name of the FreeCAD document.
+        tube_name: Name to assign to the resulting tube object.
+        outer_radius: Outer radius of the tube in mm. Must be greater than inner_radius.
+        inner_radius: Inner radius (bore) of the tube in mm. Must be less than outer_radius.
+        height: Height (length) of the tube in mm.
+
+    Returns:
+        Confirmation message and screenshot of the created tube.
+
+    Example:
+        {
+            "doc_name": "MyDocument",
+            "tube_name": "MyTube",
+            "outer_radius": 25.0,
+            "inner_radius": 20.0,
+            "height": 100.0
+        }
+    """
+    freecad = get_freecad_connection()
+    code = f"""
+import FreeCAD as App
+import Part
+
+doc = App.getDocument('{doc_name}')
+if doc is None:
+    print("ERROR: Document '{doc_name}' not found")
+else:
+    try:
+        outer_radius = {outer_radius}
+        inner_radius = {inner_radius}
+        height = {height}
+
+        if inner_radius >= outer_radius:
+            print(f"ERROR: inner_radius ({{inner_radius}}) must be less than outer_radius ({{outer_radius}})")
+        else:
+            outer = Part.makeCylinder(outer_radius, height)
+            inner = Part.makeCylinder(inner_radius, height)
+            tube_shape = outer.cut(inner)
+
+            tube_obj = doc.addObject('Part::Feature', '{tube_name}')
+            tube_obj.Shape = tube_shape
+            doc.recompute()
+
+            print(f"SUCCESS: Tube '{tube_name}' created with outer_radius={{outer_radius}}, inner_radius={{inner_radius}}, height={{height}}")
+    except Exception as e:
+        print(f"ERROR: Failed to create tube - {{str(e)}}")
+"""
+    res = freecad.execute_code(code)
+    screenshot = freecad.get_active_screenshot()
+    ok, msg = parse_execute_result(res)
+    if ok:
+        return add_screenshot_if_available([TextContent(type="text", text=msg)], screenshot)
+    raise Exception(f"Failed to create tube: {msg}")
+
 
 @mcp.tool()
 @_log_tool
