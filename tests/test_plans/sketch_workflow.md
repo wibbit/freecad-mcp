@@ -207,7 +207,106 @@ Once the constraints bug is resolved, test each geometry type individually:
 
 ---
 
-## 9. `attach_solid_to_plane`
+## 9. `groove`
+- **Signature**: `groove(doc_name, sketch_name, axis, angle, result_name)`
+- **Known**: ⏳ Untested — added 2026-05-10
+- **Creates**: PartDesign::Groove named `{sketch_name}_groove`
+- **Prerequisite**: Sketch must be inside a Body that already has additive solid material
+
+### Groove test cases
+
+| Test | Parameters | Expected | Status |
+|------|-----------|----------|--------|
+| Full groove (V_Axis) | `sketch_name="neck_sketch", axis="V_Axis", angle=360` | Revolved cut around vertical axis | ⏳ Untested |
+| Partial groove | `axis="H_Axis", angle=90` | 90° partial cut | ⏳ Untested |
+| Custom name | `result_name="NeckGroove"` | Object named 'NeckGroove' | ⏳ Untested |
+| Bad axis | `axis="diagonal"` | Clear validation error | ⏳ Untested |
+
+### Suggested test sequence
+1. `create_document("GrooveTest")`
+2. `create_datum_plane("GrooveTest", "Base", alignment="xy")`
+3. `create_sketch_on_plane("GrooveTest", "Base")` → `Base_sketch`
+4. Add 60mm circle profile via `add_contour_to_sketch`
+5. `extrude_sketch_bidirectional("GrooveTest", "Base_sketch", length_forward=40)`
+6. Create second sketch (ring profile on same plane)
+7. `groove("GrooveTest", "<ring_sketch>", axis="V_Axis", angle=360)`
+8. `measure_object` — volume < original cylinder
+
+---
+
+## 10. `rename_object`
+- **Signature**: `rename_object(doc_name, obj_name, new_label)`
+- **Known**: ⏳ Untested — added 2026-05-10
+- **Note**: Changes display label only; FreeCAD's internal Name is immutable
+
+### Test cases
+
+| Test | Parameters | Expected | Status |
+|------|-----------|----------|--------|
+| Basic rename | `obj_name="Pad", new_label="FlangePad"` | Label = 'FlangePad', Name unchanged | ⏳ Untested |
+| Object not found | `obj_name="NoSuchObject"` | Clear error | ⏳ Untested |
+
+---
+
+## 11. `close_document`
+- **Signature**: `close_document(doc_name, save_before_close)`
+- **Known**: ⏳ Untested — added 2026-05-10
+
+### Test cases
+
+| Test | Parameters | Expected | Status |
+|------|-----------|----------|--------|
+| Basic close | `doc_name="TestDoc"` | Document removed from list_documents | ⏳ Untested |
+| Save + close | `save_before_close=True` (doc must have FileName) | File saved, then closed | ⏳ Untested |
+| Not found | `doc_name="NoSuchDoc"` | Clear error | ⏳ Untested |
+
+---
+
+## 12. `import_step`
+- **Signature**: `import_step(doc_name, file_path, obj_name)`
+- **Known**: ⏳ Untested — added 2026-05-10
+
+### Test cases
+
+| Test | File type | Expected | Status |
+|------|-----------|----------|--------|
+| STEP import | `.step` / `.stp` | Solid with topology | ⏳ Untested |
+| STL import | `.stl` | Mesh object | ⏳ Untested |
+| Label assigned | `obj_name="ImportedPart"` | First object label = 'ImportedPart' | ⏳ Untested |
+| File not found | bad path | Clear error | ⏳ Untested |
+| Unsupported type | `.igs` | Clear unsupported-type error | ⏳ Untested |
+
+---
+
+## 13. `add_techdraw_dimension`
+- **Signature**: `add_techdraw_dimension(doc_name, page_name, view_name, dimension_type, references, x, y, dimension_name)`
+- **Known**: ⏳ Untested — added 2026-05-10
+- **Prerequisite**: Page and view must already exist (`create_techdraw_page` + `add_view_to_techdraw_page`)
+
+### Dimension type coverage
+
+| Type | References | Status |
+|------|-----------|--------|
+| `DistanceX` | `['Edge1', 'Edge3']` — horizontal span | ⏳ Untested |
+| `DistanceY` | `['Edge2', 'Edge4']` — vertical span | ⏳ Untested |
+| `Distance` | `['Edge1', 'Edge3']` — linear distance | ⏳ Untested |
+| `Radius` | `['Edge5']` — arc/circle edge | ⏳ Untested |
+| `Diameter` | `['Edge5']` — circle edge | ⏳ Untested |
+| `Angle` | `['Edge1', 'Edge2']` — angle between two edges | ⏳ Untested |
+
+### Suggested test sequence
+1. `create_document("DimTest")`
+2. `create_object("DimTest", "Part::Box", "Box", {"Length":80,"Width":60,"Height":40})`
+3. `create_techdraw_page("DimTest", "Sheet")`
+4. `add_view_to_techdraw_page("DimTest", "Sheet", "Box", "TopView", 100, 100, 1.0)`
+5. `get_shape_topology("DimTest", "Box")` — identify edge names
+6. `add_techdraw_dimension("DimTest", "Sheet", "TopView", "DistanceX", ["Edge1", "Edge3"], 100, 60)`
+7. `add_techdraw_dimension("DimTest", "Sheet", "TopView", "DistanceY", ["Edge2", "Edge4"], 60, 100)`
+8. Verify page shows labelled dimensions
+
+---
+
+## 14. `attach_solid_to_plane`
 - **Signature**: `attach_solid_to_plane(doc_name, solid_body_name, target_plane_name, ...)`
 - **Known**: ⏳ Untested
 - **Purpose**: Positions a solid body relative to a named reference plane

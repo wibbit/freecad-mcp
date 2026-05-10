@@ -35,22 +35,23 @@ Identified 2026-05-10. Check off as implemented and tested.
 
 ## Suggested — general gaps
 
-- [ ] **`groove(doc_name, sketch_name, axis, angle)`**
+- [x] **`groove(doc_name, sketch_name, axis, angle)`** — implemented 2026-05-10
   PartDesign::Groove — subtractive revolve. Complements `create_revolve` (additive)
   the same way `pocket_sketch` complements `extrude_sketch_bidirectional`.
+  `axis` accepts: 'H_Axis', 'V_Axis', 'X_Axis', 'Y_Axis', 'Z_Axis'.
 
-- [ ] **`rename_object(doc_name, old_name, new_name)`**
-  Rename a document object. Auto-generated names (Pad, Pocket001, etc.) need tidying
-  for readable feature trees. Currently requires `execute_code`.
+- [x] **`rename_object(doc_name, obj_name, new_label)`** — implemented 2026-05-10
+  Renames the display label of a document object (FreeCAD's internal Name is immutable).
+  Auto-generated names like Pad, Pocket001 etc. can be tidied this way.
 
-- [ ] **`close_document(doc_name)`**
-  Close an open document. Currently no way to do this without `execute_code`.
+- [x] **`close_document(doc_name, save_before_close)`** — implemented 2026-05-10
+  Close an open document. Optional `save_before_close` flag.
 
-- [ ] **`import_step(doc_name, path)`**
-  Import existing 3D geometry (STEP or STL) into a document. `import_dxf` exists
-  for 2D but there is no equivalent for 3D files.
+- [x] **`import_step(doc_name, file_path, obj_name)`** — implemented 2026-05-10
+  Import STEP (.step/.stp) or STL/OBJ files into a document. STEP imports as solid
+  geometry; STL imports as mesh. `obj_name` sets the label of the first imported object.
 
-- [ ] **TechDraw dimension tools**
-  `create_techdraw_page` and `add_view_to_techdraw_page` exist but produce a page
-  with no annotations. At minimum: add linear dimension, add radius/diameter dimension,
-  add angle dimension.
+- [x] **`add_techdraw_dimension(doc_name, page_name, view_name, dimension_type, references, x, y)`** — implemented 2026-05-10
+  Add dimension annotations to a TechDraw view. Supports 'DistanceX', 'DistanceY',
+  'Distance', 'Radius', 'Diameter', 'Angle'. References are edge/vertex names from
+  the projected view. Call `get_shape_topology` on the source object first.

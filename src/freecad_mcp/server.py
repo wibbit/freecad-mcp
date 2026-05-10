@@ -39,7 +39,9 @@ from .sketch_tools.face_sketch_manager import create_sketch_on_face as _create_s
 from .sketch_tools.contour_builder import add_contour_to_sketch as _add_contour_to_sketch
 from .sketch_tools.extrude_manager import extrude_sketch_bidirectional as _extrude_sketch_bidirectional
 from .sketch_tools.pocket_manager import pocket_sketch as _pocket_sketch
+from .sketch_tools.groove_manager import groove as _groove
 from .sketch_tools.attachment_manager import attach_solid_to_plane as _attach_solid_to_plane
+from .techdraw_tools import add_techdraw_dimension as _add_techdraw_dimension
 from .sketch_tools.boolean_operations import (
     boolean_union as _boolean_union,
     boolean_cut as _boolean_cut,
@@ -185,11 +187,13 @@ mcp = FastMCP(
         "3. Read the relevant workflow prompt before any multi-step task: session_startup_guide_prompt (session checklist), sketch_workflow (sketch-to-solid), boolean_operations_guide (combining/subtracting solids), assembly_guide (Assembly3 and Assembly4), part_primitives_guide (Part primitives and boolean ops), fem_workflow (FEM stress analysis), asset_creation_strategy (general overview).\n\n"
         "Tool groups:\n"
         "- Document/object management: create_document, list_documents, get_objects, get_object, create_object, edit_object, delete_object, get_freecad_status\n"
-        "- Sketch workflow: create_datum_plane, add_datum_plane_to_body, create_sketch_on_plane, create_sketch_in_body, create_sketch_on_face, add_contour_to_sketch, extrude_sketch_bidirectional, pocket_sketch, attach_solid_to_plane\n"
+        "- Document/utility: rename_object, close_document, import_step\n"
+        "- Sketch workflow: create_datum_plane, add_datum_plane_to_body, create_sketch_on_plane, create_sketch_in_body, create_sketch_on_face, add_contour_to_sketch, extrude_sketch_bidirectional, pocket_sketch, groove, attach_solid_to_plane\n"
         "- Boolean operations: boolean_union, boolean_cut, boolean_intersection\n"
         "- Advanced modeling: create_loft, create_revolve, create_sweep, create_spline_3d, add_fillet, add_chamfer, shell_object, mirror_object, circular_pattern, linear_pattern, create_reference_plane, create_reference_axis, import_airfoil_profile, import_dxf\n"
         "- Assembly: create_assembly3, create_assembly4 and related tools\n"
         "- FEM analysis: run_fem_analysis (requires setup via create_object — see docstring)\n"
+        "- TechDraw: create_techdraw_page, add_view_to_techdraw_page, add_techdraw_dimension\n"
         "- Inspection/view: get_view, execute_code (escape hatch for operations not covered by dedicated tools)\n\n"
         "All doc_name and obj_name values are case-sensitive and must exactly match FreeCAD's internal names. Call get_objects or get_freecad_status if you are unsure what names exist."
     ),
@@ -447,6 +451,139 @@ def delete_object(ctx: Context, doc_name: str, obj_name: str) -> list[TextConten
     except Exception as e:
         logger.error(f"Failed to delete object: {str(e)}")
         raise
+
+
+@mcp.tool()
+@_log_tool
+def rename_object(ctx: Context, doc_name: str, obj_name: str, new_label: str) -> list[TextContent | ImageContent]:
+    """Rename a FreeCAD document object by changing its display label.
+
+    In FreeCAD the internal Name is immutable; this sets the Label (the visible name in
+    the model tree). Auto-generated names like 'Pad', 'Pocket001' etc. can be tidied
+    this way without affecting references to the object.
+
+    Args:
+        doc_name: Document name
+        obj_name: Current internal name of the object (use get_objects to list)
+        new_label: New display label to assign
+
+    Returns:
+        Confirmation message
+    """
+    freecad = get_freecad_connection()
+    code = f"""
+import FreeCAD as App
+doc = App.getDocument('{doc_name}')
+if not doc:
+    print("ERROR: Document '{doc_name}' not found")
+else:
+    obj = doc.getObject('{obj_name}')
+    if not obj:
+        print("ERROR: Object '{obj_name}' not found in '{doc_name}'")
+    else:
+        old_label = obj.Label
+        obj.Label = '{new_label}'
+        doc.recompute()
+        print(f"SUCCESS: Object '{{obj.Name}}' label changed from '{{old_label}}' to '{new_label}'")
+"""
+    res = freecad.execute_code(code)
+    screenshot = freecad.get_active_screenshot()
+    ok, msg = parse_execute_result(res)
+    if ok:
+        return add_screenshot_if_available([TextContent(type="text", text=f"Object '{obj_name}' renamed to '{new_label}'")], screenshot)
+    return add_screenshot_if_available([TextContent(type="text", text=f"Failed to rename object: {msg}")], screenshot)
+
+
+@mcp.tool()
+@_log_tool
+def close_document(ctx: Context, doc_name: str, save_before_close: bool = False) -> list[TextContent]:
+    """Close an open FreeCAD document.
+
+    Args:
+        doc_name: Name of the document to close
+        save_before_close: If True, save the document before closing (requires it to have been saved at least once; default: False)
+
+    Returns:
+        Confirmation message
+    """
+    freecad = get_freecad_connection()
+    code = f"""
+import FreeCAD as App
+doc = App.getDocument('{doc_name}')
+if not doc:
+    print("ERROR: Document '{doc_name}' not found")
+else:
+    if {save_before_close} and doc.FileName:
+        doc.save()
+    App.closeDocument('{doc_name}')
+    print("SUCCESS: Document '{doc_name}' closed")
+"""
+    res = freecad.execute_code(code)
+    ok, msg = parse_execute_result(res)
+    if ok:
+        return [TextContent(type="text", text=f"Document '{doc_name}' closed")]
+    return [TextContent(type="text", text=f"Failed to close document: {msg}")]
+
+
+@mcp.tool()
+@_log_tool
+def import_step(
+    ctx: Context,
+    doc_name: str,
+    file_path: str,
+    obj_name: str | None = None,
+) -> list[TextContent | ImageContent]:
+    """Import a STEP or STL file into a FreeCAD document.
+
+    STEP files (.step, .stp) import as solid geometry with full topology.
+    STL files (.stl) import as mesh objects (no parametric history).
+
+    Args:
+        doc_name: Document name to import into
+        file_path: Absolute path to the STEP or STL file on the FreeCAD host machine
+        obj_name: Optional label to assign to the imported object
+
+    Returns:
+        Confirmation message and screenshot
+    """
+    freecad = get_freecad_connection()
+    code = f"""
+import FreeCAD as App
+import os
+
+doc = App.getDocument('{doc_name}')
+if not doc:
+    print("ERROR: Document '{doc_name}' not found")
+else:
+    path = r'{file_path}'
+    if not os.path.isfile(path):
+        print(f"ERROR: File not found: {{path}}")
+    else:
+        ext = os.path.splitext(path)[1].lower()
+        before_names = {{obj.Name for obj in doc.Objects}}
+        if ext in ('.step', '.stp'):
+            import Import
+            Import.insert(path, '{doc_name}')
+        elif ext in ('.stl', '.obj'):
+            import Mesh
+            Mesh.insert(path, '{doc_name}')
+        else:
+            print(f"ERROR: Unsupported file type '{{ext}}'. Supported: .step, .stp, .stl, .obj")
+            raise SystemExit
+        doc.recompute()
+        new_objs = [obj for obj in doc.Objects if obj.Name not in before_names]
+        label = '{obj_name or ""}'
+        if label and new_objs:
+            new_objs[0].Label = label
+        names = [obj.Name for obj in new_objs]
+        print(f"SUCCESS: Imported {{len(new_objs)}} object(s) from '{{os.path.basename(path)}}': {{names}}")
+"""
+    res = freecad.execute_code(code)
+    screenshot = freecad.get_active_screenshot()
+    ok, msg = parse_execute_result(res)
+    if ok:
+        return add_screenshot_if_available([TextContent(type="text", text=msg)], screenshot)
+    return add_screenshot_if_available([TextContent(type="text", text=f"Failed to import file: {msg}")], screenshot)
 
 
 @mcp.tool()
@@ -1015,6 +1152,54 @@ def add_view_to_techdraw_page(
 
 @mcp.tool()
 @_log_tool
+def add_techdraw_dimension(
+    ctx: Context,
+    doc_name: str,
+    page_name: str,
+    view_name: str,
+    dimension_type: str,
+    references: list[str],
+    x: float = 0.0,
+    y: float = 0.0,
+    dimension_name: str | None = None,
+) -> list[TextContent | ImageContent]:
+    """Add a dimension annotation to a TechDraw view.
+
+    Prerequisite: the page and view must already exist (use create_techdraw_page and
+    add_view_to_techdraw_page). References are edge or vertex names from the projected
+    2D view (e.g. 'Edge1', 'Vertex2') — use get_shape_topology on the source object
+    to discover topology names before projecting.
+
+    Args:
+        doc_name: Document name
+        page_name: Name of the TechDraw page
+        view_name: Name of the DrawViewPart on the page
+        dimension_type: One of 'DistanceX', 'DistanceY', 'Distance', 'Radius', 'Diameter', 'Angle'
+        references: Edge or vertex names from the projected view (e.g. ['Edge1'] for radius, ['Edge1', 'Edge3'] for distance)
+        x: Horizontal position of the dimension label on the page in mm (default 0)
+        y: Vertical position of the dimension label on the page in mm (default 0)
+        dimension_name: Optional explicit name for the dimension object
+
+    Returns:
+        Confirmation message and screenshot
+
+    Example — add a diameter dimension to a circular edge:
+        {
+            "doc_name": "MyDoc",
+            "page_name": "Page",
+            "view_name": "TopView",
+            "dimension_type": "Diameter",
+            "references": ["Edge3"],
+            "x": 50.0,
+            "y": 20.0
+        }
+    """
+    freecad = get_freecad_connection()
+    return _add_techdraw_dimension(ctx, freecad, add_screenshot_if_available, doc_name, page_name, view_name, dimension_type, references, x, y, dimension_name)
+
+
+@mcp.tool()
+@_log_tool
 def run_fem_analysis(
     ctx: Context,
     doc_name: str,
@@ -1397,6 +1582,45 @@ def pocket_sketch(
     """
     freecad = get_freecad_connection()
     return _pocket_sketch(ctx, freecad, add_screenshot_if_available, doc_name, sketch_name, depth, depth2, through_all, symmetric)
+
+
+@mcp.tool()
+@_log_tool
+def groove(
+    ctx: Context,
+    doc_name: str,
+    sketch_name: str,
+    axis: str = "V_Axis",
+    angle: float = 360.0,
+    result_name: str | None = None,
+) -> list[TextContent | ImageContent]:
+    """Create a PartDesign::Groove (subtractive revolve) from a sketch inside a Body.
+
+    A Groove cuts material by revolving a sketch profile around an axis — the PartDesign
+    equivalent of a lathe turning operation. The sketch must be inside a PartDesign::Body
+    that already has additive material (from extrude_sketch_bidirectional or similar).
+
+    Args:
+        doc_name: Document name
+        sketch_name: Sketch inside a Body whose profile will be revolved
+        axis: Axis of revolution — one of 'H_Axis' (sketch horizontal),
+              'V_Axis' (sketch vertical), 'X_Axis', 'Y_Axis', 'Z_Axis' (default: 'V_Axis')
+        angle: Angle of rotation in degrees (default: 360.0 for full groove)
+        result_name: Optional name for the groove object (default: '{sketch_name}_groove')
+
+    Returns:
+        Confirmation message and screenshot
+
+    Example:
+        {
+            "doc_name": "MyDoc",
+            "sketch_name": "neck_sketch",
+            "axis": "V_Axis",
+            "angle": 360.0
+        }
+    """
+    freecad = get_freecad_connection()
+    return _groove(ctx, freecad, add_screenshot_if_available, doc_name, sketch_name, axis, angle, result_name)
 
 
 @mcp.tool()
