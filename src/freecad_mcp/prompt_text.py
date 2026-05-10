@@ -30,7 +30,18 @@ E. Assemblies
    - Read the assembly_guide prompt before starting.
    - Use Assembly3 (constraint-based) or Assembly4 (LCS-based) tools.
 
-F. execute_code — escape hatch only
+F. Inspection and file management
+   - Measure geometry: measure_object (bounding box, volume, surface area, centre of mass)
+   - Inspect topology: get_shape_topology (face/edge/vertex counts and properties)
+   - Save/load: save_document, load_document
+   - Export: export_object (STEP, IGES, STL, OBJ)
+   - Copy: copy_object (duplicates an object with all dependencies)
+   - Visibility: set_object_visibility (show/hide objects)
+   - Undo: undo (rolls back N operations; requires document opened via FreeCAD GUI)
+   - Spreadsheets: spreadsheet_read, spreadsheet_write (read/write Spreadsheet::Sheet cells)
+   - Engineering drawings: create_techdraw_page, add_view_to_techdraw_page (TechDraw views)
+
+G. execute_code — escape hatch only
    - Use only for operations not covered by any dedicated tool above.
    - Prefer dedicated tools wherever they exist.
 
