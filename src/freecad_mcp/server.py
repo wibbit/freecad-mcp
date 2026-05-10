@@ -2204,7 +2204,7 @@ def session_startup_guide_prompt() -> str:
 
 @mcp.tool()
 @_log_tool
-def create_loft(ctx: Context, doc_name: str, sketch_names: list[str], result_name: str, solid: bool = True, ruled: bool = False) -> list[TextContent]:
+def create_loft(ctx: Context, doc_name: str, sketch_names: list[str], result_name: str | None = None, solid: bool = True, ruled: bool = False) -> list[TextContent]:
     """Create a loft (swept solid) through two or more existing closed sketch profiles.
 
     Prerequisite: all sketches in sketch_names must already exist in the document and be closed profiles. Use create_sketch_on_plane and add_contour_to_sketch to create each profile first. See the sketch_workflow prompt.
@@ -2213,7 +2213,8 @@ def create_loft(ctx: Context, doc_name: str, sketch_names: list[str], result_nam
     ruled=True creates flat-ruled faces between sections; False (default) uses smooth B-spline interpolation.
     """
     freecad = get_freecad_connection()
-    return _create_loft(ctx, freecad, add_screenshot_if_available, doc_name, sketch_names, result_name, solid, ruled)
+    name = result_name or f"{'_'.join(sketch_names[:2])}_loft"
+    return _create_loft(ctx, freecad, add_screenshot_if_available, doc_name, sketch_names, name, solid, ruled)
 
 @mcp.tool()
 @_log_tool

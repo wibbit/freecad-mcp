@@ -75,7 +75,7 @@ else:
                 pad.Length = {length_forward}
             
             pad.ReferenceAxis = (sketch, ['N_Axis'])
-            sketch.Visibility = False
+            sketch.ViewObject.Visibility = False
             
             doc.recompute()
             print(f"SUCCESS: Solid '{{pad.Name}}' created by extruding '{sketch_name}' (forward: {length_forward}, backward: {length_backward})")

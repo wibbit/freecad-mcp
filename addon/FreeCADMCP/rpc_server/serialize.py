@@ -62,9 +62,9 @@ def serialize_view_object(view):
     if view is None:
         return None
     return {
-        "ShapeColor": serialize_value(view.ShapeColor),
-        "Transparency": view.Transparency,
-        "Visibility": view.Visibility,
+        "ShapeColor": serialize_value(getattr(view, "ShapeColor", None)),
+        "Transparency": getattr(view, "Transparency", None),
+        "Visibility": getattr(view, "Visibility", None),
     }
 
 
@@ -95,8 +95,10 @@ def serialize_object(obj):
             except Exception as e:
                 result["Properties"][prop] = f"<error: {str(e)}>"
 
-        if hasattr(obj, "ViewObject") and obj.ViewObject is not None:
-            view = obj.ViewObject
-            result["ViewObject"] = serialize_view_object(view)
+        try:
+            if hasattr(obj, "ViewObject") and obj.ViewObject is not None:
+                result["ViewObject"] = serialize_view_object(obj.ViewObject)
+        except Exception as e:
+            result["ViewObject"] = {"error": str(e)}
 
         return result

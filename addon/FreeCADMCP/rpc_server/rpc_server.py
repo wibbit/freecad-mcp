@@ -1118,22 +1118,28 @@ class FreeCADRPC:
             return {"success": False, "data": None, "error": f"{type(e).__name__}: {e}"}
 
     def _get_objects_gui(self, doc_name):
-        doc = FreeCAD.getDocument(doc_name)
-        if doc is None:
-            open_docs = list(FreeCAD.listDocuments().keys())
-            return {"success": False, "data": None, "error": f"Document '{doc_name}' not found. Open documents: {open_docs}"}
-        return {"success": True, "data": [serialize_object(obj) for obj in doc.Objects], "error": None}
+        try:
+            doc = FreeCAD.getDocument(doc_name)
+            if doc is None:
+                open_docs = list(FreeCAD.listDocuments().keys())
+                return {"success": False, "data": None, "error": f"Document '{doc_name}' not found. Open documents: {open_docs}"}
+            return {"success": True, "data": [serialize_object(obj) for obj in doc.Objects], "error": None}
+        except Exception as e:
+            return {"success": False, "data": None, "error": f"Failed to get objects: {type(e).__name__}: {e}"}
 
     def _get_object_gui(self, doc_name, obj_name):
-        doc = FreeCAD.getDocument(doc_name)
-        if doc is None:
-            open_docs = list(FreeCAD.listDocuments().keys())
-            return {"success": False, "data": None, "error": f"Document '{doc_name}' not found. Open documents: {open_docs}"}
-        obj = doc.getObject(obj_name)
-        if not obj:
-            available = [o.Name for o in doc.Objects]
-            return {"success": False, "data": None, "error": f"Object '{obj_name}' not found in '{doc_name}'. Available: {available}"}
-        return {"success": True, "data": serialize_object(obj), "error": None}
+        try:
+            doc = FreeCAD.getDocument(doc_name)
+            if doc is None:
+                open_docs = list(FreeCAD.listDocuments().keys())
+                return {"success": False, "data": None, "error": f"Document '{doc_name}' not found. Open documents: {open_docs}"}
+            obj = doc.getObject(obj_name)
+            if not obj:
+                available = [o.Name for o in doc.Objects]
+                return {"success": False, "data": None, "error": f"Object '{obj_name}' not found in '{doc_name}'. Available: {available}"}
+            return {"success": True, "data": serialize_object(obj), "error": None}
+        except Exception as e:
+            return {"success": False, "data": None, "error": f"Failed to get object: {type(e).__name__}: {e}"}
 
     def _get_status_gui(self) -> dict:
         try:
