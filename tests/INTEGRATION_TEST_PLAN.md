@@ -17,31 +17,41 @@ Last updated: 2026-05-10 | Tested against: MCP server v0.x + FreeCAD (Flatpak)
 
 ---
 
+## Reporting Results
+
+**Write results to a separate file — do not edit the test plan files.**
+
+Results go in `tests/test_results_YYYY-MM-DD_HHMMSS.md`. Test plan files (`INTEGRATION_TEST_PLAN.md` and `test_plans/*.md`) are updated only when the test plan itself changes — new scenarios added, prerequisites updated, or coverage gaps identified.
+
+Result files are snapshots of a specific test run and accumulate over time. The status column below reflects the latest known run.
+
+---
+
 ## Sub-documents
 
 Each area has its own focused test plan. Start here to find the right document.
 
 | Area | File | Tools covered | Status |
 |------|------|---------------|--------|
-| Document lifecycle, CRUD, execute_code, inspection | [test_plans/core.md](test_plans/core.md) | `create_document`, `list_documents`, `save_document`, `load_document`, `create_object`, `get_object`, `get_objects`, `edit_object`, `delete_object`, `copy_object`, `undo`, `execute_code`, `measure_object`, `get_shape_topology`, `get_freecad_status`, `get_view` | Partially tested |
-| Sketch workflow | [test_plans/sketch_workflow.md](test_plans/sketch_workflow.md) | `create_datum_plane`, `create_sketch_on_plane`, `add_contour_to_sketch`, `extrude_sketch_bidirectional`, `attach_solid_to_plane` | Mostly untested |
-| Boolean ops, transforms, advanced modeling, import/export | [test_plans/modeling.md](test_plans/modeling.md) | `boolean_union`, `boolean_cut`, `boolean_intersection`, `transform_object`, `align_object`, `attach_to_face`, `set_object_visibility`, `add_fillet`, `add_chamfer`, `shell_object`, `mirror_object`, `circular_pattern`, `linear_pattern`, `create_loft`, `create_revolve`, `create_sweep`, `create_spline_3d`, `create_reference_plane`, `create_reference_axis`, `import_airfoil_profile`, `import_dxf`, `export_object`, `insert_part_from_library`, `get_parts_list` | Partially tested |
-| Assembly3 + Assembly4 | [test_plans/assembly.md](test_plans/assembly.md) | `create_assembly3`, `add_part_to_assembly3`, `add_assembly3_constraint`, `solve_assembly3`, `list_assembly3_constraints`, `delete_assembly3_constraint`, `modify_assembly3_constraint`, `create_assembly4`, `create_lcs_assembly4`, `insert_part_assembly4`, `attach_lcs_to_geometry`, `list_assembly4_lcs`, `delete_lcs_assembly4`, `modify_lcs_assembly4`, `list_assembly_parts`, `export_assembly`, `generate_bom`, `get_assembly_properties` | All untested |
-| TechDraw, FEM, Spreadsheet | [test_plans/output_tools.md](test_plans/output_tools.md) | `create_techdraw_page`, `add_view_to_techdraw_page`, `run_fem_analysis`, `spreadsheet_read`, `spreadsheet_write` | All untested |
+| Document lifecycle, CRUD, execute_code, inspection | [test_plans/core.md](test_plans/core.md) | `create_document`, `list_documents`, `save_document`, `load_document`, `create_object`, `get_object`, `get_objects`, `edit_object`, `delete_object`, `copy_object`, `undo`, `execute_code`, `measure_object`, `get_shape_topology`, `get_freecad_status`, `get_view` | Tested 2026-05-10 |
+| Sketch workflow | [test_plans/sketch_workflow.md](test_plans/sketch_workflow.md) | `create_datum_plane`, `create_sketch_on_plane`, `add_contour_to_sketch`, `extrude_sketch_bidirectional`, `attach_solid_to_plane` | Tested 2026-05-10 |
+| Boolean ops, transforms, advanced modeling, import/export | [test_plans/modeling.md](test_plans/modeling.md) | `boolean_union`, `boolean_cut`, `boolean_intersection`, `transform_object`, `align_object`, `attach_to_face`, `set_object_visibility`, `add_fillet`, `add_chamfer`, `shell_object`, `mirror_object`, `circular_pattern`, `linear_pattern`, `create_loft`, `create_revolve`, `create_sweep`, `create_spline_3d`, `create_reference_plane`, `create_reference_axis`, `import_airfoil_profile`, `import_dxf`, `export_object`, `insert_part_from_library`, `get_parts_list` | Tested 2026-05-10 |
+| Assembly3 + Assembly4 | [test_plans/assembly.md](test_plans/assembly.md) | `create_assembly3`, `add_part_to_assembly3`, `add_assembly3_constraint`, `solve_assembly3`, `list_assembly3_constraints`, `delete_assembly3_constraint`, `modify_assembly3_constraint`, `create_assembly4`, `create_lcs_assembly4`, `insert_part_assembly4`, `attach_lcs_to_geometry`, `list_assembly4_lcs`, `delete_lcs_assembly4`, `modify_lcs_assembly4`, `list_assembly_parts`, `export_assembly`, `generate_bom`, `get_assembly_properties` | Tested 2026-05-10 |
+| TechDraw, FEM, Spreadsheet | [test_plans/output_tools.md](test_plans/output_tools.md) | `create_techdraw_page`, `add_view_to_techdraw_page`, `run_fem_analysis`, `spreadsheet_read`, `spreadsheet_write` | Tested 2026-05-10 |
 
 ---
 
 ## Known Bugs Summary
 
-| # | Tool | Symptom | Root Cause |
-|---|------|---------|------------|
-| 1 | `get_object`, `get_objects` | `string indices must be integers, not 'str'` | Response parsing in RPC/serialization layer |
-| 2 | `add_contour_to_sketch` | `name 'constraints' is not defined` | Server-side variable name mismatch in f-string |
-| 3 | `extrude_sketch_bidirectional` | "Sketch is not in a Body" | Tool doesn't auto-attach sketch to body or accepts standalone |
-| 4 | `create_loft` | Pydantic validation error on ImageContent | Response type mismatch |
-| 5 | Draft:: types in `create_object` | "not a document object type" | Draft objects require Draft API, not addObject |
-| 6 | `execute_code` output | PrintMessage not captured | No stdout capture from FreeCAD console |
-| 7 | Sketcher types in `create_object` | "not a document object type" | Sketcher objects require `Sketcher::SketchObject` |
+| # | Tool | Symptom | Root Cause | Status |
+|---|------|---------|------------|--------|
+| 1 | `get_objects` | `string indices must be integers, not 'str'` | `serialize_view_object` raised AttributeError; caught as string by `process_gui_tasks` | Fixed 2026-05-10 — needs retest |
+| 2 | `add_contour_to_sketch` | `name 'constraints' is not defined` | Double-brace escaping in f-string left `{len(constraints)}` in exec'd code | Fixed 2026-05-10 — needs retest |
+| 3 | `extrude_sketch_bidirectional` | "Sketch is not in a Body" | Sketch created outside a Body container | Returns helpful error; use `create_datum_plane` workflow |
+| 4 | `create_loft`, `create_revolve`, `create_sweep`, `create_spline_3d` | Pydantic validation error on mixed TextContent + ImageContent response | Response type mismatch in advanced modeling tools | Open |
+| 5 | `shell_object` | `'Part.Feature' object has no attribute 'Base'` | `Part::Thickness` not supported via `addObject()` in this FreeCAD version | Open |
+| 6 | Draft:: types in `create_object` | "not a document object type" | Draft objects require Draft API, not `addObject` | By design — use `execute_code` + `Draft.makeX()` |
+| 7 | `execute_code` output | `FreeCAD.Console.PrintMessage` not captured | Output goes to FreeCAD internal console, not stdout | By design — use `print()` instead |
 
 ---
 
