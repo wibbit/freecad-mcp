@@ -121,7 +121,7 @@ Example lines:
 **Use it to answer**: Which MCP tool was called, with what arguments? How long did the full round-trip take?
 
 ### RAG server log — knowledge search activity
-**Path**: `/home/dfurlong/Documents/Projects/freecad-rag/mcp_server.log`
+**Path**: `/home/dfurlong/git/freecad-rag/mcp_server.log`
 
 **Contains**: Every `search_freecad_docs` query, the source filter applied, and the Ollama rewriting/reranking HTTP calls.
 
