@@ -2,6 +2,7 @@ import logging
 from typing import Any
 from mcp.types import TextContent, ImageContent
 from mcp.server.fastmcp import Context
+from ..responses import parse_execute_result
 
 logger = logging.getLogger("FreeCADMCPserver.sketch_tools.extrude_manager")
 
@@ -66,7 +67,7 @@ else:
                 pad.Midplane = True
                 pad.Length = {total_length}
             elif {length_backward} > 0:
-                pad.Type = 1
+                pad.Type = 3
                 pad.Length = {length_forward}
                 pad.Length2 = {length_backward}
             else:
@@ -82,8 +83,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
@@ -92,11 +94,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to extrude sketch: {error_msg}"
+                    text=f"Failed to extrude sketch: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)

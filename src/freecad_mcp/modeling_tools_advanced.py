@@ -14,7 +14,7 @@ from .responses import parse_execute_result
 
 def add_fillet(ctx: Context, freecad_connection, add_screenshot_helper,
                doc_name: str, object_name: str, edges: list[str],
-               radius: float, result_name: str = None) -> list[TextContent | ImageContent]:
+               radius: float, result_name: str | None = None) -> list[TextContent | ImageContent]:
     """
     Add fillet (rounded edges) to an object
     
@@ -63,10 +63,10 @@ else:
         
         fillet.Edges = edges_to_fillet
         doc.recompute()
-        
+
         # Hide original
-        obj.Visibility = False
-        
+        obj.ViewObject.Visibility = False
+
         if fillet.Shape.isValid():
             print(f'SUCCESS: Fillet added to {{len(edges_to_fillet)}} edges with radius {radius}')
         else:
@@ -86,7 +86,7 @@ else:
 
 def add_chamfer(ctx: Context, freecad_connection, add_screenshot_helper,
                 doc_name: str, object_name: str, edges: list[str],
-                distance: float, result_name: str = None) -> list[TextContent | ImageContent]:
+                distance: float, result_name: str | None = None) -> list[TextContent | ImageContent]:
     """
     Add chamfer (beveled edges) to an object
     
@@ -126,15 +126,15 @@ else:
         
         for edge_name in edge_names:
             edge_idx = int(edge_name.replace('Edge', ''))
-            # Format: (edge_index, distance)
-            edges_to_chamfer.append((edge_idx, {distance}))
-        
+            # Format: (edge_index, dist1, dist2)
+            edges_to_chamfer.append((edge_idx, {distance}, {distance}))
+
         chamfer.Edges = edges_to_chamfer
         doc.recompute()
-        
+
         # Hide original
-        obj.Visibility = False
-        
+        obj.ViewObject.Visibility = False
+
         if chamfer.Shape.isValid():
             print(f'SUCCESS: Chamfer added to {{len(edges_to_chamfer)}} edges with distance {distance}')
         else:
@@ -155,7 +155,7 @@ else:
 def shell_object(ctx: Context, freecad_connection, add_screenshot_helper,
                  doc_name: str, object_name: str, thickness: float,
                  faces_to_remove: list[str] | None = None, 
-                 result_name: str = None) -> list[TextContent | ImageContent]:
+                 result_name: str | None = None) -> list[TextContent | ImageContent]:
     """
     Create a hollow shell by removing faces and adding thickness
     
@@ -174,8 +174,13 @@ def shell_object(ctx: Context, freecad_connection, add_screenshot_helper,
         thickness=2.0, faces_to_remove=["Face1", "Face6"]
     """
     res_name = result_name or f"{object_name}_shelled"
-    faces_list = 'None' if not faces_to_remove else ', '.join([f'"{f}"' for f in faces_to_remove])
-    
+
+    # Build the face names list for injection into the generated code
+    if faces_to_remove:
+        face_names_repr = repr(faces_to_remove)  # e.g. ['Face1', 'Face3']
+    else:
+        face_names_repr = '[]'
+
     code = f"""
 import FreeCAD as App
 import Part
@@ -189,38 +194,19 @@ elif not hasattr(obj, 'Shape') or obj.Shape.isNull():
     print('ERROR: Object has no valid shape')
 else:
     try:
-        # Get faces to remove
-        faces_to_remove_list = {faces_list if faces_to_remove else 'None'}
-        
-        if faces_to_remove_list and faces_to_remove_list != 'None':
-            # Parse face indices
-            face_indices = []
-            for face_name in [{faces_list}]:
-                face_idx = int(face_name.replace('Face', '')) - 1
-                if face_idx < len(obj.Shape.Faces):
-                    face_indices.append(face_idx)
-            
-            # Create shell with openings
-            shell = doc.addObject('Part::Thickness', '{res_name}')
-            shell.Value = {thickness}
-            shell.Join = 0  # Intersection
-            shell.Faces = [(obj, face_indices)]
-        else:
-            # Create closed shell
-            shell = doc.addObject('Part::Thickness', '{res_name}')
-            shell.Value = {thickness}
-            shell.Mode = 0  # Skin
-            shell.Join = 0
-        
+        face_names = {face_names_repr}
+        shell = doc.addObject('Part::Thickness', '{res_name}')
+        shell.Value = {thickness}
+        shell.Join = 0
         shell.Base = obj
+        if face_names:
+            shell.Faces = [(obj, name) for name in face_names]
+        else:
+            shell.Mode = 0
         doc.recompute()
-        
-        # Hide original
-        obj.Visibility = False
-        
+        obj.ViewObject.Visibility = False
         if shell.Shape.isValid():
-            removed_count = len(faces_to_remove_list) if faces_to_remove_list != 'None' else 0
-            print(f'SUCCESS: Shell created with thickness {thickness}, {{removed_count}} face(s) removed')
+            print(f'SUCCESS: Shell created with thickness {thickness}, {{len(face_names)}} face(s) removed')
         else:
             print('ERROR: Shell operation produced invalid shape')
     except Exception as e:
@@ -238,7 +224,7 @@ else:
 
 def mirror_object(ctx: Context, freecad_connection, add_screenshot_helper,
                   doc_name: str, source_obj: str, mirror_plane: dict,
-                  result_name: str = None, merge: bool = True) -> list[TextContent | ImageContent]:
+                  result_name: str | None = None, merge: bool = True) -> list[TextContent | ImageContent]:
     """
     Mirror an object across a plane
     
@@ -284,14 +270,14 @@ else:
         doc.recompute()
         
         # Merge if requested
-        if {str(merge).lower()}:
+        if {merge}:
             fusion = doc.addObject('Part::MultiFuse', '{res_name}_fused')
             fusion.Shapes = [src, mirror]
             doc.recompute()
             
             if fusion.Shape.isValid():
-                mirror.Visibility = False
-                src.Visibility = False
+                mirror.ViewObject.Visibility = False
+                src.ViewObject.Visibility = False
                 print(f'SUCCESS: Mirror created and fused into symmetric object')
             else:
                 print('ERROR: Fusion produced invalid shape')
@@ -316,7 +302,7 @@ else:
 def circular_pattern(ctx: Context, freecad_connection, add_screenshot_helper,
                      doc_name: str, object_name: str, axis: dict,
                      count: int, angle: float = 360.0, 
-                     result_name: str = None) -> list[TextContent | ImageContent]:
+                     result_name: str | None = None) -> list[TextContent | ImageContent]:
     """
     Create circular pattern (polar array) of an object
     
@@ -397,8 +383,8 @@ else:
             if pattern.Shape.isValid():
                 # Hide sources
                 for obj in objects:
-                    obj.Visibility = False
-                
+                    obj.ViewObject.Visibility = False
+
                 print(f'SUCCESS: Circular pattern created with {count} instances over {angle}°')
             else:
                 print('ERROR: Pattern fusion produced invalid shape')
@@ -420,7 +406,7 @@ else:
 def linear_pattern(ctx: Context, freecad_connection, add_screenshot_helper,
                    doc_name: str, object_name: str, direction: dict,
                    spacing: float, count: int, 
-                   result_name: str = None) -> list[TextContent | ImageContent]:
+                   result_name: str | None = None) -> list[TextContent | ImageContent]:
     """
     Create linear pattern (rectangular array) of an object
     
@@ -483,8 +469,8 @@ else:
             if pattern.Shape.isValid():
                 # Hide sources
                 for obj in objects:
-                    obj.Visibility = False
-                
+                    obj.ViewObject.Visibility = False
+
                 print(f'SUCCESS: Linear pattern created with {count} instances, spacing {spacing}')
             else:
                 print('ERROR: Pattern fusion produced invalid shape')
@@ -543,23 +529,18 @@ import Part
 doc = App.getDocument('{doc_name}')
 
 try:
-    # Create datum plane by offset
-    plane_obj = doc.addObject('PartDesign::Plane', '{plane_name}')
-    
-    # Set reference plane
     if '{plane}' == 'XY':
-        plane_obj.Support = [(doc.getObject('XY_Plane'), '')]
-        plane_obj.MapMode = 'FlatFace'
+        normal = App.Vector(0, 0, 1)
+        origin = App.Vector(-500, -500, {offset})
     elif '{plane}' == 'XZ':
-        plane_obj.Support = [(doc.getObject('XZ_Plane'), '')]
-        plane_obj.MapMode = 'FlatFace'
-    elif '{plane}' == 'YZ':
-        plane_obj.Support = [(doc.getObject('YZ_Plane'), '')]
-        plane_obj.MapMode = 'FlatFace'
-    
-    # Apply offset
-    plane_obj.AttachmentOffset = App.Placement(App.Vector(0, 0, {offset}), App.Rotation())
-    
+        normal = App.Vector(0, 1, 0)
+        origin = App.Vector(-500, {offset}, -500)
+    else:  # YZ
+        normal = App.Vector(1, 0, 0)
+        origin = App.Vector({offset}, -500, -500)
+    plane_shape = Part.makePlane(1000, 1000, origin, normal)
+    plane_obj = doc.addObject('Part::Feature', '{plane_name}')
+    plane_obj.Shape = plane_shape
     doc.recompute()
     print(f'SUCCESS: Reference plane created with offset {offset} from {plane}')
 except Exception as e:
@@ -776,13 +757,13 @@ try:
     upper_points = [App.Vector(xu[i], yu[i], 0) for i in range(len(xu))]
     upper_spline = Part.BSplineCurve()
     upper_spline.interpolate(upper_points)
-    sketch.addGeometry(upper_spline.toShape().Curve)
-    
+    sketch.addGeometry(upper_spline)
+
     # Add lower surface as B-spline
     lower_points = [App.Vector(xl[i], yl[i], 0) for i in range(len(xl))]
     lower_spline = Part.BSplineCurve()
     lower_spline.interpolate(lower_points)
-    sketch.addGeometry(lower_spline.toShape().Curve)
+    sketch.addGeometry(lower_spline)
     
     # Close at trailing edge
     sketch.addGeometry(Part.LineSegment(

@@ -5,6 +5,7 @@ import json
 from typing import Any
 from mcp.types import TextContent, ImageContent
 from mcp.server.fastmcp import Context
+from ..responses import parse_execute_result
 
 logger = logging.getLogger("FreeCADMCPserver.assembly_tools.assembly4_advanced")
 
@@ -93,20 +94,19 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
-            message = res.get("message", "")
-            
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             # Extract LCS data
             lcs_data = []
-            if "LCS_DATA:" in message:
+            if "LCS_DATA:" in msg:
                 try:
-                    json_start = message.find("LCS_DATA:") + len("LCS_DATA:")
-                    json_str = message[json_start:].strip()
+                    json_start = msg.find("LCS_DATA:") + len("LCS_DATA:")
+                    json_str = msg[json_start:].strip()
                     lcs_data = json.loads(json_str)
                 except Exception as e:
                     logger.error(f"Failed to parse LCS data: {e}")
-            
+
             response = [
                 TextContent(
                     type="text",
@@ -115,11 +115,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to list Assembly4 LCS: {error_msg}"
+                    text=f"Failed to list Assembly4 LCS: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -186,8 +185,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
@@ -196,11 +196,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to delete LCS: {error_msg}"
+                    text=f"Failed to delete LCS: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -297,8 +296,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             changes = []
             if has_position:
                 changes.append(f"position ({pos_x}, {pos_y}, {pos_z})")
@@ -312,11 +312,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to modify LCS: {error_msg}"
+                    text=f"Failed to modify LCS: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)

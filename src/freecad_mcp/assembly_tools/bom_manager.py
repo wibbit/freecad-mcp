@@ -5,6 +5,7 @@ import json
 from typing import Any
 from mcp.types import TextContent, ImageContent
 from mcp.server.fastmcp import Context
+from ..responses import parse_execute_result
 
 logger = logging.getLogger("FreeCADMCPserver.assembly_tools.bom_manager")
 
@@ -102,20 +103,19 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
-            message = res.get("message", "")
-            
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             # Extract BOM data
             bom_data = []
-            if "BOM_DATA:" in message:
+            if "BOM_DATA:" in msg:
                 try:
-                    json_start = message.find("BOM_DATA:") + len("BOM_DATA:")
-                    json_str = message[json_start:].strip()
+                    json_start = msg.find("BOM_DATA:") + len("BOM_DATA:")
+                    json_str = msg[json_start:].strip()
                     bom_data = json.loads(json_str)
                 except Exception as e:
                     logger.error(f"Failed to parse BOM data: {e}")
-            
+
             # Format selon le format demandé
             if format == "json":
                 formatted_bom = json.dumps(bom_data, indent=2)
@@ -125,7 +125,7 @@ else:
                 formatted_bom = generate_markdown_format(bom_data)
             else:
                 formatted_bom = json.dumps(bom_data, indent=2)
-            
+
             response = [
                 TextContent(
                     type="text",
@@ -134,11 +134,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to generate BOM: {error_msg}"
+                    text=f"Failed to generate BOM: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -289,20 +288,19 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
-            message = res.get("message", "")
-            
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             # Extract properties data
             properties_data = {}
-            if "PROPERTIES_DATA:" in message:
+            if "PROPERTIES_DATA:" in msg:
                 try:
-                    json_start = message.find("PROPERTIES_DATA:") + len("PROPERTIES_DATA:")
-                    json_str = message[json_start:].strip()
+                    json_start = msg.find("PROPERTIES_DATA:") + len("PROPERTIES_DATA:")
+                    json_str = msg[json_start:].strip()
                     properties_data = json.loads(json_str)
                 except Exception as e:
                     logger.error(f"Failed to parse properties data: {e}")
-            
+
             response = [
                 TextContent(
                     type="text",
@@ -311,11 +309,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to get assembly properties: {error_msg}"
+                    text=f"Failed to get assembly properties: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)

@@ -24,7 +24,7 @@ FreeCAD offers two powerful assembly workbenches, each with distinct approaches:
 ### 1. Create Assembly
 ```json
 {
-    "tool": "create_assembly3_tool",
+    "tool": "create_assembly3",
     "params": {
         "doc_name": "MyDoc",
         "assembly_name": "MainAssembly"
@@ -36,7 +36,7 @@ FreeCAD offers two powerful assembly workbenches, each with distinct approaches:
 From external file:
 ```json
 {
-    "tool": "add_part_to_assembly3_tool",
+    "tool": "add_part_to_assembly3",
     "params": {
         "doc_name": "MyDoc",
         "assembly_name": "MainAssembly",
@@ -49,7 +49,7 @@ From external file:
 From existing object:
 ```json
 {
-    "tool": "add_part_to_assembly3_tool",
+    "tool": "add_part_to_assembly3",
     "params": {
         "doc_name": "MyDoc",
         "assembly_name": "MainAssembly",
@@ -65,7 +65,7 @@ From existing object:
 **PlaneCoincident** - Align two planar faces:
 ```json
 {
-    "tool": "add_assembly3_constraint_tool",
+    "tool": "add_assembly3_constraint",
     "params": {
         "doc_name": "MyDoc",
         "assembly_name": "MainAssembly",
@@ -81,7 +81,7 @@ From existing object:
 **Axial** - Align two cylindrical axes:
 ```json
 {
-    "tool": "add_assembly3_constraint_tool",
+    "tool": "add_assembly3_constraint",
     "params": {
         "doc_name": "MyDoc",
         "assembly_name": "MainAssembly",
@@ -97,7 +97,7 @@ From existing object:
 **Distance** - Fixed distance between elements:
 ```json
 {
-    "tool": "add_assembly3_constraint_tool",
+    "tool": "add_assembly3_constraint",
     "params": {
         "doc_name": "MyDoc",
         "assembly_name": "MainAssembly",
@@ -114,7 +114,7 @@ From existing object:
 **Angle** - Fixed angle between elements:
 ```json
 {
-    "tool": "add_assembly3_constraint_tool",
+    "tool": "add_assembly3_constraint",
     "params": {
         "doc_name": "MyDoc",
         "assembly_name": "MainAssembly",
@@ -131,7 +131,7 @@ From existing object:
 **Lock** - Lock object in place:
 ```json
 {
-    "tool": "add_assembly3_constraint_tool",
+    "tool": "add_assembly3_constraint",
     "params": {
         "doc_name": "MyDoc",
         "assembly_name": "MainAssembly",
@@ -146,7 +146,7 @@ From existing object:
 ### 4. Solve Assembly
 ```json
 {
-    "tool": "solve_assembly3_tool",
+    "tool": "solve_assembly3",
     "params": {
         "doc_name": "MyDoc",
         "assembly_name": "MainAssembly"
@@ -161,7 +161,7 @@ From existing object:
 ### 1. Create Assembly
 ```json
 {
-    "tool": "create_assembly4_tool",
+    "tool": "create_assembly4",
     "params": {
         "doc_name": "MyDoc",
         "assembly_name": "MainAssembly"
@@ -175,7 +175,7 @@ From existing object:
 **Basic LCS:**
 ```json
 {
-    "tool": "create_lcs_assembly4_tool",
+    "tool": "create_lcs_assembly4",
     "params": {
         "doc_name": "MyDoc",
         "parent_name": "MainAssembly",
@@ -188,7 +188,7 @@ From existing object:
 **LCS with Rotation:**
 ```json
 {
-    "tool": "create_lcs_assembly4_tool",
+    "tool": "create_lcs_assembly4",
     "params": {
         "doc_name": "MyDoc",
         "parent_name": "MainAssembly",
@@ -205,7 +205,7 @@ From existing object:
 ### 3. Attach LCS to Geometry
 ```json
 {
-    "tool": "attach_lcs_to_geometry_tool",
+    "tool": "attach_lcs_to_geometry",
     "params": {
         "doc_name": "MyDoc",
         "lcs_name": "LCS_Mount1",
@@ -226,7 +226,7 @@ From existing object:
 ### 4. Insert Parts with LCS Attachment
 ```json
 {
-    "tool": "insert_part_assembly4_tool",
+    "tool": "insert_part_assembly4",
     "params": {
         "doc_name": "MyDoc",
         "assembly_name": "MainAssembly",
@@ -246,7 +246,7 @@ From existing object:
 ### List Assembly Parts
 ```json
 {
-    "tool": "list_assembly_parts_tool",
+    "tool": "list_assembly_parts",
     "params": {
         "doc_name": "MyDoc",
         "assembly_name": "MainAssembly",
@@ -258,7 +258,7 @@ From existing object:
 ### Export Assembly
 ```json
 {
-    "tool": "export_assembly_tool",
+    "tool": "export_assembly",
     "params": {
         "doc_name": "MyDoc",
         "assembly_name": "MainAssembly",
@@ -278,7 +278,7 @@ From existing object:
 ### Calculate Assembly Mass
 ```json
 {
-    "tool": "calculate_assembly_mass_tool",
+    "tool": "calculate_assembly_mass",
     "params": {
         "doc_name": "MyDoc",
         "assembly_name": "MainAssembly"
@@ -353,36 +353,36 @@ From existing object:
 
 ```json
 // 1. Create assembly
-{"tool": "create_assembly3_tool", "params": {"doc_name": "Motor", "assembly_name": "MotorAsm"}}
+{"tool": "create_assembly3", "params": {"doc_name": "Motor", "assembly_name": "MotorAsm"}}
 
 // 2. Add base part (lock it)
-{"tool": "add_part_to_assembly3_tool", "params": {"doc_name": "Motor", "assembly_name": "MotorAsm", "part_object": "Base"}}
-{"tool": "add_assembly3_constraint_tool", "params": {"doc_name": "Motor", "assembly_name": "MotorAsm", "constraint_type": "Lock", "references": [{"object": "Base", "element": ""}]}}
+{"tool": "add_part_to_assembly3", "params": {"doc_name": "Motor", "assembly_name": "MotorAsm", "part_object": "Base"}}
+{"tool": "add_assembly3_constraint", "params": {"doc_name": "Motor", "assembly_name": "MotorAsm", "constraint_type": "Lock", "references": [{"object": "Base", "element": ""}]}}
 
 // 3. Add shaft
-{"tool": "add_part_to_assembly3_tool", "params": {"doc_name": "Motor", "assembly_name": "MotorAsm", "part_object": "Shaft"}}
+{"tool": "add_part_to_assembly3", "params": {"doc_name": "Motor", "assembly_name": "MotorAsm", "part_object": "Shaft"}}
 
 // 4. Align shaft to base
-{"tool": "add_assembly3_constraint_tool", "params": {"doc_name": "Motor", "assembly_name": "MotorAsm", "constraint_type": "Axial", "references": [{"object": "Base", "element": "Edge1"}, {"object": "Shaft", "element": "Edge1"}]}}
+{"tool": "add_assembly3_constraint", "params": {"doc_name": "Motor", "assembly_name": "MotorAsm", "constraint_type": "Axial", "references": [{"object": "Base", "element": "Edge1"}, {"object": "Shaft", "element": "Edge1"}]}}
 
 // 5. Solve
-{"tool": "solve_assembly3_tool", "params": {"doc_name": "Motor", "assembly_name": "MotorAsm"}}
+{"tool": "solve_assembly3", "params": {"doc_name": "Motor", "assembly_name": "MotorAsm"}}
 ```
 
 ## Example: Complete Assembly4 Workflow
 
 ```json
 // 1. Create assembly (with default LCS)
-{"tool": "create_assembly4_tool", "params": {"doc_name": "Robot", "assembly_name": "RobotAsm"}}
+{"tool": "create_assembly4", "params": {"doc_name": "Robot", "assembly_name": "RobotAsm"}}
 
 // 2. Create mounting LCS
-{"tool": "create_lcs_assembly4_tool", "params": {"doc_name": "Robot", "parent_name": "RobotAsm", "lcs_name": "LCS_ArmMount", "position": {"x": 0, "y": 0, "z": 100}}}
+{"tool": "create_lcs_assembly4", "params": {"doc_name": "Robot", "parent_name": "RobotAsm", "lcs_name": "LCS_ArmMount", "position": {"x": 0, "y": 0, "z": 100}}}
 
 // 3. Insert arm part
-{"tool": "insert_part_assembly4_tool", "params": {"doc_name": "Robot", "assembly_name": "RobotAsm", "part_file": "C:/parts/arm.FCStd", "part_name": "Arm", "attach_lcs_part": "LCS_Origin", "attach_lcs_target": "LCS_ArmMount"}}
+{"tool": "insert_part_assembly4", "params": {"doc_name": "Robot", "assembly_name": "RobotAsm", "part_file": "C:/parts/arm.FCStd", "part_name": "Arm", "attach_lcs_part": "LCS_Origin", "attach_lcs_target": "LCS_ArmMount"}}
 
 // 4. List parts to verify
-{"tool": "list_assembly_parts_tool", "params": {"doc_name": "Robot", "assembly_name": "RobotAsm"}}
+{"tool": "list_assembly_parts", "params": {"doc_name": "Robot", "assembly_name": "RobotAsm"}}
 ```
 
 ---

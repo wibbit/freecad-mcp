@@ -2,6 +2,7 @@ import logging
 from typing import Any
 from mcp.types import TextContent, ImageContent
 from mcp.server.fastmcp import Context
+from ..responses import parse_execute_result
 
 logger = logging.getLogger("FreeCADMCPserver.sketch_tools.sketch_manager")
 
@@ -42,22 +43,24 @@ else:
     if not body:
         print("ERROR: Datum plane (Body) '{plane_name}' not found")
     else:
-        sketch = body.newObject('Sketcher::SketchObject', '{sketch_name}')
-        
-        origin = body.Origin
-        xy_plane = origin.XY_Plane
-        
-        sketch.AttachmentSupport = (xy_plane, [''])
-        sketch.MapMode = 'FlatFace'
-        
-        doc.recompute()
-        print(f"SUCCESS: Sketch '{{sketch.Name}}' created on plane '{plane_name}'")
+        datum_plane = doc.getObject('{plane_name}_Datum')
+        if not datum_plane:
+            print("ERROR: Datum plane object '{plane_name}_Datum' not found")
+        else:
+            sketch = body.newObject('Sketcher::SketchObject', '{sketch_name}')
+
+            sketch.AttachmentSupport = [(datum_plane, '')]
+            sketch.MapMode = 'FlatFace'
+
+            doc.recompute()
+            print(f"SUCCESS: Sketch '{{sketch.Name}}' created on plane '{plane_name}'")
 """
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
@@ -66,11 +69,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to create sketch: {error_msg}"
+                    text=f"Failed to create sketch: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)

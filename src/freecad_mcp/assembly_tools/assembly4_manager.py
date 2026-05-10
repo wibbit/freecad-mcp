@@ -2,6 +2,7 @@ import logging
 from typing import Any
 from mcp.types import TextContent, ImageContent
 from mcp.server.fastmcp import Context
+from ..responses import parse_execute_result
 
 logger = logging.getLogger("FreeCADMCPserver.assembly_tools.assembly4_manager")
 
@@ -53,8 +54,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
@@ -63,11 +65,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to create Assembly4: {error_msg}"
+                    text=f"Failed to create Assembly4: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -157,8 +158,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
@@ -167,11 +169,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to create LCS: {error_msg}"
+                    text=f"Failed to create LCS: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -266,8 +267,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             attach_info = f" with LCS attachment" if has_attachment else ""
             response = [
                 TextContent(
@@ -277,11 +279,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to insert part: {error_msg}"
+                    text=f"Failed to insert part: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -356,8 +357,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
@@ -366,11 +368,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to attach LCS: {error_msg}"
+                    text=f"Failed to attach LCS: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)

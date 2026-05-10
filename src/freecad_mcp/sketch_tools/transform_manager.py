@@ -2,6 +2,7 @@ import logging
 from typing import Any
 from mcp.types import TextContent, ImageContent
 from mcp.server.fastmcp import Context
+from ..responses import parse_execute_result
 
 logger = logging.getLogger("FreeCADMCPserver.sketch_tools.transform_manager")
 
@@ -104,15 +105,16 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             mode = "relatively" if relative else "absolutely"
             parts = []
             if has_position:
                 parts.append(f"position ({pos_x}, {pos_y}, {pos_z})")
             if has_rotation:
                 parts.append(f"rotation {angle}° around ({axis_x}, {axis_y}, {axis_z})")
-            
+
             response = [
                 TextContent(
                     type="text",
@@ -121,11 +123,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to transform object: {error_msg}"
+                    text=f"Failed to transform object: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -216,8 +217,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             offset_str = f" with offset ({offset_x}, {offset_y}, {offset_z})" if has_offset else ""
             response = [
                 TextContent(
@@ -227,11 +229,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to align object: {error_msg}"
+                    text=f"Failed to align object: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -348,8 +349,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             offset_str = f" with offset ({offset_x}, {offset_y}, {offset_z})" if has_offset else ""
             response = [
                 TextContent(
@@ -359,11 +361,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to attach object: {error_msg}"
+                    text=f"Failed to attach object: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)

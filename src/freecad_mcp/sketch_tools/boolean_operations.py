@@ -2,6 +2,7 @@ import logging
 from typing import Any
 from mcp.types import TextContent, ImageContent
 from mcp.server.fastmcp import Context
+from ..responses import parse_execute_result
 
 logger = logging.getLogger("FreeCADMCPserver.sketch_tools.boolean_operations")
 
@@ -84,8 +85,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
@@ -94,11 +96,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to create union: {error_msg}"
+                    text=f"Failed to create union: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -170,8 +171,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
@@ -180,11 +182,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to create cut: {error_msg}"
+                    text=f"Failed to create cut: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -255,8 +256,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
@@ -265,11 +267,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to create intersection: {error_msg}"
+                    text=f"Failed to create intersection: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)

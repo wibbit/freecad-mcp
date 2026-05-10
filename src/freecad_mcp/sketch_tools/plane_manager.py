@@ -2,6 +2,7 @@ import logging
 from typing import Any
 from mcp.types import TextContent, ImageContent
 from mcp.server.fastmcp import Context
+from ..responses import parse_execute_result
 
 logger = logging.getLogger("FreeCADMCPserver.sketch_tools.plane_manager")
 
@@ -41,9 +42,10 @@ def create_datum_plane(
                 )
             ]
         
-        mm = mapmode_map[alignment.lower()]
+        al = alignment.upper()
         code = f"""
 import FreeCAD as App
+import math
 doc = App.getDocument('{doc_name}')
 if not doc:
     print("ERROR: Document '{doc_name}' not found")
@@ -52,22 +54,21 @@ else:
     plane = doc.addObject('PartDesign::Plane', '{plane_name}_Datum')
     body.addObject(plane)
     plane.MapMode = 'Deactivated'
-    off = plane.Placement
-    if '{mm}' == 'ObjectXY':
-        off.Base.z = {offset}
-    elif '{mm}' == 'ObjectXZ':
-        off.Base.y = {offset}
-    else:
-        off.Base.x = {offset}
-    plane.Placement = off
+    _placements = {{
+        'XY': App.Placement(App.Vector(0, 0, {offset}), App.Rotation(0, 0, 0)),
+        'XZ': App.Placement(App.Vector(0, {offset}, 0), App.Rotation(App.Vector(1, 0, 0), 90)),
+        'YZ': App.Placement(App.Vector({offset}, 0, 0), App.Rotation(App.Vector(0, 1, 0), 90)),
+    }}
+    plane.Placement = _placements.get('{al}', _placements['XY'])
     doc.recompute()
     print("SUCCESS: Datum plane '{plane_name}_Datum' created with alignment '{alignment}'")
 """
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
@@ -76,11 +77,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to create datum plane: {error_msg}"
+                    text=f"Failed to create datum plane: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)

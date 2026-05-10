@@ -2,6 +2,7 @@ import logging
 from typing import Any
 from mcp.types import TextContent, ImageContent
 from mcp.server.fastmcp import Context
+from ..responses import parse_execute_result
 
 logger = logging.getLogger("FreeCADMCPserver.sketch_tools.contour_builder")
 
@@ -90,8 +91,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
@@ -100,11 +102,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to add contour: {error_msg}"
+                    text=f"Failed to add contour: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -141,7 +142,8 @@ def _generate_geometry_code(geometry_elements: list[dict[str, Any]]) -> str:
             radius = elem.get("radius", 10)
             start_angle = elem.get("start_angle", 0)
             end_angle = elem.get("end_angle", 90)
-            lines.append(f"            geometry_elements.append(Part.ArcOfCircle(Part.Circle(App.Vector({cx}, {cy}, 0), App.Vector(0, 0, 1), {radius}), {start_angle}, {end_angle}))")
+            lines.append(f"            import math as _math")
+            lines.append(f"            geometry_elements.append(Part.ArcOfCircle(Part.Circle(App.Vector({cx}, {cy}, 0), App.Vector(0, 0, 1), {radius}), _math.radians({start_angle}), _math.radians({end_angle})))")
             
         elif elem_type == "circle":
             center = elem.get("center", {})
@@ -154,7 +156,9 @@ def _generate_geometry_code(geometry_elements: list[dict[str, Any]]) -> str:
             degree = elem.get("degree", 3)
             closed = elem.get("closed", False)
             points_str = "[" + ", ".join([f"App.Vector({p.get('x', 0)}, {p.get('y', 0)}, 0)" for p in points]) + "]"
-            lines.append(f"            geometry_elements.append(Part.BSplineCurve({points_str}, None, None, {closed}, {degree}, None, False))")
+            lines.append(f"            _spline = Part.BSplineCurve()")
+            lines.append(f"            _spline.interpolate({points_str})")
+            lines.append(f"            geometry_elements.append(_spline)")
             
         elif elem_type == "ellipse":
             center = elem.get("center", {})

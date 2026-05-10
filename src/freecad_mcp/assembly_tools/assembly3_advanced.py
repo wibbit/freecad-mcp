@@ -5,6 +5,7 @@ import json
 from typing import Any
 from mcp.types import TextContent, ImageContent
 from mcp.server.fastmcp import Context
+from ..responses import parse_execute_result
 
 logger = logging.getLogger("FreeCADMCPserver.assembly_tools.assembly3_advanced")
 
@@ -95,20 +96,19 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
-            message = res.get("message", "")
-            
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             # Extract constraints data
             constraints_data = []
-            if "CONSTRAINTS_DATA:" in message:
+            if "CONSTRAINTS_DATA:" in msg:
                 try:
-                    json_start = message.find("CONSTRAINTS_DATA:") + len("CONSTRAINTS_DATA:")
-                    json_str = message[json_start:].strip()
+                    json_start = msg.find("CONSTRAINTS_DATA:") + len("CONSTRAINTS_DATA:")
+                    json_str = msg[json_start:].strip()
                     constraints_data = json.loads(json_str)
                 except Exception as e:
                     logger.error(f"Failed to parse constraints data: {e}")
-            
+
             response = [
                 TextContent(
                     type="text",
@@ -117,11 +117,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to list Assembly3 constraints: {error_msg}"
+                    text=f"Failed to list Assembly3 constraints: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -188,8 +187,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
@@ -198,11 +198,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to delete constraint: {error_msg}"
+                    text=f"Failed to delete constraint: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -271,8 +270,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
@@ -281,11 +281,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to modify constraint: {error_msg}"
+                    text=f"Failed to modify constraint: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)

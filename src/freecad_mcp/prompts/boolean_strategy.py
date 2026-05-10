@@ -11,27 +11,27 @@ AVAILABLE OPERATIONS:
 1. UNION (Fusion)
    - Combines multiple solids into one
    - Use case: Assembly of parts, joining components
-   - Command: boolean_union_tool
+   - Command: boolean_union
    - Example: Fuse a base plate with mounting posts
    - Note: Can combine 2 or more objects in a single operation
    
 2. CUT (Difference/Subtraction)
    - Removes one solid from another
    - Use case: Creating holes, pockets, cutouts, grooves
-   - Command: boolean_cut_tool
+   - Command: boolean_cut
    - Example: Drill holes in a plate, create pockets for screws
    - Note: Order matters! Base = what you keep, Tool = what you remove
    
 3. INTERSECTION (Common)
    - Keeps only the overlapping volume
    - Use case: Finding common geometry, creating complex shapes
-   - Command: boolean_intersection_tool
+   - Command: boolean_intersection
    - Example: Shape defined by multiple constraints
    - Note: Result is smaller than both inputs
    
 4. COMMON
    - Alias of INTERSECTION for FreeCAD terminology
-   - Command: boolean_common_tool
+   - Command: boolean_common
    - Same as intersection, just different name
 
 WORKFLOW BEST PRACTICES:

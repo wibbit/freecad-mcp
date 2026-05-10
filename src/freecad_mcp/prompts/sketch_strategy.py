@@ -174,7 +174,7 @@ BEST PRACTICES:
 
 5. Build Complex Shapes with Multiple Operations
    - Create multiple sketches on different planes
-   - Combine using Boolean operations (future feature)
+   - Combine using boolean_union, boolean_cut, boolean_intersection
    - Think in terms of additive/subtractive features
 
 GEOMETRY INDEXING:
@@ -204,8 +204,7 @@ Organic shapes:
 
 Symmetric profiles:
 1. Draw half the profile
-2. Use mirror constraints (future feature)
-3. Or manually create mirrored geometry
+2. Use mirror_object to mirror the extruded solid, or manually create mirrored geometry
 
 TROUBLESHOOTING:
 

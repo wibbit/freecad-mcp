@@ -3,6 +3,7 @@ import json
 from typing import Any
 from mcp.types import TextContent, ImageContent
 from mcp.server.fastmcp import Context
+from ..responses import parse_execute_result
 
 logger = logging.getLogger("FreeCADMCPserver.assembly_tools.assembly_common")
 
@@ -86,20 +87,19 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
-            message = res.get("message", "")
-            
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             # Extract parts data from message
             parts_data = []
-            if "PARTS_DATA:" in message:
+            if "PARTS_DATA:" in msg:
                 try:
-                    json_start = message.find("PARTS_DATA:") + len("PARTS_DATA:")
-                    json_str = message[json_start:].strip()
+                    json_start = msg.find("PARTS_DATA:") + len("PARTS_DATA:")
+                    json_str = msg[json_start:].strip()
                     parts_data = json.loads(json_str)
                 except:
                     pass
-            
+
             response = [
                 TextContent(
                     type="text",
@@ -108,11 +108,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to list assembly parts: {error_msg}"
+                    text=f"Failed to list assembly parts: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -197,8 +196,9 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
@@ -207,11 +207,10 @@ else:
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to export assembly: {error_msg}"
+                    text=f"Failed to export assembly: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
@@ -293,22 +292,21 @@ else:
         
         res = freecad_connection.execute_code(code)
         screenshot = freecad_connection.get_active_screenshot()
-        
-        if res.get("success") and "SUCCESS:" in res.get("message", ""):
-            message = res.get("message", "")
+
+        ok, msg = parse_execute_result(res)
+        if ok:
             response = [
                 TextContent(
                     type="text",
-                    text=f"Assembly mass calculation:\n{message}"
+                    text=f"Assembly mass calculation:\n{msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
         else:
-            error_msg = res.get("message", res.get("error", "Unknown error"))
             response = [
                 TextContent(
                     type="text",
-                    text=f"Failed to calculate assembly mass: {error_msg}"
+                    text=f"Failed to calculate assembly mass: {msg}"
                 )
             ]
             return add_screenshot_helper(response, screenshot)
