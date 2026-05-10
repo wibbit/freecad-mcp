@@ -89,11 +89,13 @@ def create_sketch_in_body(
     doc_name: str,
     body_name: str,
     plane_name: str,
+    sketch_name: str | None = None,
 ) -> list[TextContent | ImageContent]:
     """Create a sketch inside an existing PartDesign Body on a named datum plane.
 
-    The sketch is named '{plane_name}_sketch'. Use add_datum_plane_to_body first
-    to add datum planes to the body, then call this tool for each sketch needed.
+    The sketch is named '{plane_name}_sketch' by default, or the explicit sketch_name
+    if provided. Use add_datum_plane_to_body first to add datum planes to the body,
+    then call this tool for each sketch needed.
 
     Args:
         ctx: MCP context
@@ -102,12 +104,13 @@ def create_sketch_in_body(
         doc_name: Document name
         body_name: Name of the existing PartDesign::Body
         plane_name: Name of the datum plane inside the body to attach the sketch to
+        sketch_name: Optional explicit name for the sketch (defaults to '{plane_name}_sketch')
 
     Returns:
         List of text/image content with result
     """
     try:
-        sketch_name = f"{plane_name}_sketch"
+        sketch_name = sketch_name or f"{plane_name}_sketch"
 
         code = f"""
 import FreeCAD as App

@@ -1,287 +1,183 @@
-"""
-Tests pour le workflow Sketch du serveur MCP FreeCAD
-Date création: 2025-10-08
-"""
+import pytest
+from mcp.types import TextContent
 
-import sys
-import time
-import json
-from pathlib import Path
+from freecad_mcp.sketch_tools.plane_manager import create_datum_plane, add_datum_plane_to_body
+from freecad_mcp.sketch_tools.sketch_manager import create_sketch_on_plane, create_sketch_in_body
+from freecad_mcp.sketch_tools.extrude_manager import extrude_sketch_bidirectional
+from freecad_mcp.sketch_tools.pocket_manager import pocket_sketch
+from freecad_mcp.sketch_tools.groove_manager import groove
 
-class TestSketchWorkflow:
-    """Tests du workflow sketch complet"""
-    
-    def __init__(self, output_file="test_results_sketch.txt"):
-        self.output_file = output_file
-        self.results = []
-        self.test_count = 0
-        self.passed_count = 0
-        self.failed_count = 0
-        self.doc_name = None
-        
-    def log(self, message):
-        """Enregistre un message dans les résultats"""
-        print(message)
-        self.results.append(message)
-    
-    def setup_document(self):
-        """Crée un document de test"""
-        self.log("\n=== SETUP: Création du document ===")
-        
-        try:
-            import xmlrpc.client
-            server = xmlrpc.client.ServerProxy("http://localhost:9875", allow_none=True)
-            
-            self.doc_name = f"SketchTest_{int(time.time())}"
-            result = server.create_document(self.doc_name)
-            
-            if result.get("success"):
-                self.log(f"✅ Document '{self.doc_name}' créé")
-                return True
-            else:
-                self.log(f"❌ Échec création document: {result.get('error')}")
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ Exception setup: {str(e)}")
-            return False
-    
-    def test_create_datum_plane(self):
-        """Test création d'un plan de référence"""
-        self.test_count += 1
-        self.log(f"\n=== Test {self.test_count}: CREATE_DATUM_PLANE ===")
-        
-        try:
-            import xmlrpc.client
-            server = xmlrpc.client.ServerProxy("http://localhost:9875", allow_none=True)
-            
-            code = f"""
-import sys
-sys.path.insert(0, r'c:\\Users\\marti\\AppData\\Roaming\\Python\\Python313\\site-packages')
-from freecad_mcp.sketch_tools.plane_manager import create_datum_plane
 
-class MockContext:
-    pass
+def ok(result):
+    return (
+        result
+        and isinstance(result[0], TextContent)
+        and (
+            "successfully" in result[0].text.lower()
+            or "SUCCESS" in result[0].text
+        )
+    )
 
-class MockConnection:
-    def execute_code(self, code):
-        exec(code)
-        return {{'success': True, 'message': 'Plane created'}}
-    def get_active_screenshot(self):
-        return None
 
-def mock_screenshot(response, screenshot):
-    return response
-
-ctx = MockContext()
-conn = MockConnection()
-result = create_datum_plane(ctx, conn, mock_screenshot, '{self.doc_name}', 'base_plane', 'xy', 0.0)
-print(result[0].text if result else 'No result')
-"""
-            
-            result = server.execute_code(code)
-            
-            if result.get("success"):
-                self.log(f"✅ PASS: Plan datum créé")
-                self.passed_count += 1
-                return True
-            else:
-                self.log(f"❌ FAIL: {result.get('error')}")
-                self.failed_count += 1
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ FAIL: Exception - {str(e)}")
-            self.failed_count += 1
-            return False
-    
-    def test_create_sketch_on_plane(self):
-        """Test création d'une esquisse sur plan"""
-        self.test_count += 1
-        self.log(f"\n=== Test {self.test_count}: CREATE_SKETCH_ON_PLANE ===")
-        
-        try:
-            import xmlrpc.client
-            server = xmlrpc.client.ServerProxy("http://localhost:9875", allow_none=True)
-            
-            code = f"""
-import sys
-sys.path.insert(0, r'c:\\Users\\marti\\AppData\\Roaming\\Python\\Python313\\site-packages')
-from freecad_mcp.sketch_tools.sketch_manager import create_sketch_on_plane
-
-class MockContext:
-    pass
-
-class MockConnection:
-    def execute_code(self, code):
-        exec(code)
-        return {{'success': True, 'message': 'Sketch created'}}
-    def get_active_screenshot(self):
-        return None
-
-def mock_screenshot(response, screenshot):
-    return response
-
-ctx = MockContext()
-conn = MockConnection()
-result = create_sketch_on_plane(ctx, conn, mock_screenshot, '{self.doc_name}', 'base_plane')
-print(result[0].text if result else 'No result')
-"""
-            
-            result = server.execute_code(code)
-            
-            if result.get("success"):
-                self.log(f"✅ PASS: Esquisse créée sur plan")
-                self.passed_count += 1
-                return True
-            else:
-                self.log(f"❌ FAIL: {result.get('error')}")
-                self.failed_count += 1
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ FAIL: Exception - {str(e)}")
-            self.failed_count += 1
-            return False
-    
-    def test_add_contour_rectangle(self):
-        """Test ajout d'un contour rectangulaire"""
-        self.test_count += 1
-        self.log(f"\n=== Test {self.test_count}: ADD_CONTOUR_RECTANGLE ===")
-        
-        try:
-            import xmlrpc.client
-            server = xmlrpc.client.ServerProxy("http://localhost:9875", allow_none=True)
-            
-            code = f"""
-import FreeCAD as App
-doc = App.getDocument('{self.doc_name}')
-
-# Créer un Body et un Sketch simple
-body = doc.addObject('PartDesign::Body', 'base_plane')
-sketch = doc.addObject('Sketcher::SketchObject', 'base_plane_sketch')
-body.addObject(sketch)
-
-# Ajouter un rectangle simple
-sketch.addGeometry([
-    Part.LineSegment(App.Vector(0, 0, 0), App.Vector(100, 0, 0)),
-    Part.LineSegment(App.Vector(100, 0, 0), App.Vector(100, 50, 0)),
-    Part.LineSegment(App.Vector(100, 50, 0), App.Vector(0, 50, 0)),
-    Part.LineSegment(App.Vector(0, 50, 0), App.Vector(0, 0, 0))
-], False)
-
+def _add_rect(conn, doc, sketch_name, x0=0, y0=0, x1=80, y1=60):
+    res = conn.execute_code(f"""
+import FreeCAD as App, Part, Sketcher
+doc = App.getDocument('{doc}')
+sketch = doc.getObject('{sketch_name}')
+v = [App.Vector(x, y, 0) for x, y in [({x0},{y0}),({x1},{y0}),({x1},{y1}),({x0},{y1})]]
+sketch.addGeometry([Part.LineSegment(v[i], v[(i+1)%4]) for i in range(4)], False)
 doc.recompute()
-print('SUCCESS: Rectangle contour added')
-"""
-            
-            result = server.execute_code(code)
-            
-            if result.get("success") and "SUCCESS" in result.get("message", ""):
-                self.log(f"✅ PASS: Contour rectangulaire ajouté")
-                self.passed_count += 1
-                return True
-            else:
-                self.log(f"❌ FAIL: {result.get('error', result.get('message'))}")
-                self.failed_count += 1
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ FAIL: Exception - {str(e)}")
-            self.failed_count += 1
-            return False
-    
-    def test_extrude_sketch(self):
-        """Test extrusion d'esquisse"""
-        self.test_count += 1
-        self.log(f"\n=== Test {self.test_count}: EXTRUDE_SKETCH ===")
-        
-        try:
-            import xmlrpc.client
-            server = xmlrpc.client.ServerProxy("http://localhost:9875", allow_none=True)
-            
-            code = f"""
-import FreeCAD as App
-doc = App.getDocument('{self.doc_name}')
-body = doc.getObject('base_plane')
-sketch = doc.getObject('base_plane_sketch')
-
-if body and sketch:
-    pad = body.newObject('PartDesign::Pad', 'base_plane_solid')
-    pad.Profile = sketch
-    pad.Length = 20.0
-    doc.recompute()
-    print('SUCCESS: Sketch extruded')
-else:
-    print('ERROR: Body or sketch not found')
-"""
-            
-            result = server.execute_code(code)
-            
-            if result.get("success") and "SUCCESS" in result.get("message", ""):
-                self.log(f"✅ PASS: Esquisse extrudée")
-                self.passed_count += 1
-                return True
-            else:
-                self.log(f"❌ FAIL: {result.get('error', result.get('message'))}")
-                self.failed_count += 1
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ FAIL: Exception - {str(e)}")
-            self.failed_count += 1
-            return False
-    
-    def run_all_tests(self):
-        """Exécute tous les tests du workflow sketch"""
-        self.log("=" * 60)
-        self.log("TESTS DU WORKFLOW SKETCH - FreeCAD MCP")
-        self.log(f"Date: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-        self.log("=" * 60)
-        
-        if self.setup_document():
-            self.test_create_datum_plane()
-            self.test_create_sketch_on_plane()
-            self.test_add_contour_rectangle()
-            self.test_extrude_sketch()
-        else:
-            self.log("\n❌ ERREUR: Impossible de créer le document de test")
-        
-        self.print_summary()
-        self.save_results()
-    
-    def print_summary(self):
-        """Affiche le résumé des tests"""
-        self.log("\n" + "=" * 60)
-        self.log("RÉSUMÉ DES TESTS")
-        self.log("=" * 60)
-        self.log(f"Total tests: {self.test_count}")
-        self.log(f"✅ Réussis: {self.passed_count}")
-        self.log(f"❌ Échoués: {self.failed_count}")
-        
-        if self.test_count > 0:
-            success_rate = (self.passed_count / self.test_count) * 100
-            self.log(f"Taux de réussite: {success_rate:.1f}%")
-        
-        self.log("=" * 60)
-    
-    def save_results(self):
-        """Sauvegarde les résultats dans un fichier"""
-        try:
-            with open(self.output_file, 'w', encoding='utf-8') as f:
-                f.write('\n'.join(self.results))
-            self.log(f"\nRésultats sauvegardés dans: {self.output_file}")
-        except Exception as e:
-            self.log(f"\n❌ Erreur sauvegarde résultats: {str(e)}")
+print('SUCCESS: geometry added')
+""")
+    assert res.get("success") and "SUCCESS" in res["data"]["output"], \
+        f"Failed to add rect geometry: {res}"
 
 
-if __name__ == "__main__":
-    print("Démarrage des tests du workflow sketch...")
-    print("IMPORTANT: Assurez-vous que FreeCAD et le serveur XML-RPC sont lancés!")
-    print("Attente 3 secondes avant démarrage...\n")
-    time.sleep(3)
-    
-    tester = TestSketchWorkflow()
-    tester.run_all_tests()
+def test_create_datum_plane_xy(conn, doc, mock_ctx, no_screenshot):
+    result = create_datum_plane(mock_ctx, conn, no_screenshot, doc, "base_plane", "xy", 0.0)
+    assert ok(result), f"create_datum_plane xy failed: {result}"
 
 
+def test_create_datum_plane_xz(conn, doc, mock_ctx, no_screenshot):
+    result = create_datum_plane(mock_ctx, conn, no_screenshot, doc, "top_plane", "xz", 10.0)
+    assert ok(result), f"create_datum_plane xz failed: {result}"
 
+
+def test_full_sketch_extrude_workflow(conn, doc, mock_ctx, no_screenshot):
+    r = create_datum_plane(mock_ctx, conn, no_screenshot, doc, "base_plane", "xy", 0.0)
+    assert ok(r), f"plane: {r}"
+
+    r = create_sketch_on_plane(mock_ctx, conn, no_screenshot, doc, "base_plane")
+    assert ok(r), f"sketch: {r}"
+
+    _add_rect(conn, doc, "base_plane_sketch")
+
+    r = extrude_sketch_bidirectional(mock_ctx, conn, no_screenshot, doc, "base_plane_sketch", 20.0)
+    assert ok(r), f"extrude: {r}"
+
+    meas = conn.measure_object(doc, "base_plane_solid")
+    assert meas.get("success"), meas.get("error")
+    data = meas.get("data", {})
+    volume = data.get("volume", data.get("Volume", 0.0))
+    expected = 80.0 * 60.0 * 20.0
+    assert abs(volume - expected) < 10.0, f"Volume {volume} != {expected}"
+
+
+def test_extrude_taper_angle(conn, doc, mock_ctx, no_screenshot):
+    r = create_datum_plane(mock_ctx, conn, no_screenshot, doc, "taper_plane", "xy", 0.0)
+    assert ok(r)
+
+    r = create_sketch_on_plane(mock_ctx, conn, no_screenshot, doc, "taper_plane")
+    assert ok(r)
+
+    _add_rect(conn, doc, "taper_plane_sketch")
+
+    r = extrude_sketch_bidirectional(
+        mock_ctx, conn, no_screenshot, doc, "taper_plane_sketch",
+        length_forward=20.0, taper_angle=-1.5
+    )
+    assert ok(r), f"taper extrude failed: {r}"
+
+
+def test_extrude_reversed(conn, doc, mock_ctx, no_screenshot):
+    r = create_datum_plane(mock_ctx, conn, no_screenshot, doc, "rev_plane", "xy", 0.0)
+    assert ok(r)
+
+    r = create_sketch_on_plane(mock_ctx, conn, no_screenshot, doc, "rev_plane")
+    assert ok(r)
+
+    _add_rect(conn, doc, "rev_plane_sketch")
+
+    r = extrude_sketch_bidirectional(
+        mock_ctx, conn, no_screenshot, doc, "rev_plane_sketch",
+        length_forward=20.0, reversed=True
+    )
+    assert ok(r), f"reversed extrude failed: {r}"
+
+
+def test_pocket_sketch(conn, doc, mock_ctx, no_screenshot):
+    # Build base solid
+    r = create_datum_plane(mock_ctx, conn, no_screenshot, doc, "base_plane", "xy", 0.0)
+    assert ok(r)
+    r = create_sketch_on_plane(mock_ctx, conn, no_screenshot, doc, "base_plane")
+    assert ok(r)
+    _add_rect(conn, doc, "base_plane_sketch", 0, 0, 100, 100)
+    r = extrude_sketch_bidirectional(mock_ctx, conn, no_screenshot, doc, "base_plane_sketch", 50.0)
+    assert ok(r)
+
+    base_meas = conn.measure_object(doc, "base_plane_solid")
+    base_vol = base_meas["data"].get("volume", base_meas["data"].get("Volume", 0))
+
+    # Add a second datum plane for pocket sketch (coincident with XY) inside the same body
+    r = add_datum_plane_to_body(mock_ctx, conn, no_screenshot, doc, "base_plane", "pocket_plane", "xy", 0.0)
+    assert ok(r), f"add_datum_plane_to_body failed: {r}"
+
+    # create_sketch_in_body names sketch as '{plane_name}_sketch' automatically
+    r = create_sketch_in_body(mock_ctx, conn, no_screenshot, doc, "base_plane", "pocket_plane")
+    assert ok(r), f"create_sketch_in_body failed: {r}"
+
+    _add_rect(conn, doc, "pocket_plane_sketch", 20, 20, 60, 60)
+
+    r = pocket_sketch(mock_ctx, conn, no_screenshot, doc, "pocket_plane_sketch", depth=20.0)
+    assert ok(r), f"pocket failed: {r}"
+
+    after = conn.measure_object(doc, "pocket_plane_sketch_pocket")
+    if after.get("success"):
+        pocket_vol = after["data"].get("volume", after["data"].get("Volume", 0))
+        assert pocket_vol < base_vol, f"Pocket volume {pocket_vol} not less than base {base_vol}"
+
+
+def test_add_datum_plane_to_body(conn, doc, mock_ctx, no_screenshot):
+    r = create_datum_plane(mock_ctx, conn, no_screenshot, doc, "main_plane", "xy", 0.0)
+    assert ok(r)
+
+    r = add_datum_plane_to_body(mock_ctx, conn, no_screenshot, doc, "main_plane", "second_plane", "xz", 5.0)
+    assert ok(r), f"add_datum_plane_to_body failed: {r}"
+
+
+def test_create_sketch_in_body(conn, doc, mock_ctx, no_screenshot):
+    r = create_datum_plane(mock_ctx, conn, no_screenshot, doc, "host_plane", "xy", 0.0)
+    assert ok(r)
+
+    r = add_datum_plane_to_body(mock_ctx, conn, no_screenshot, doc, "host_plane", "extra_plane", "xy", 0.0)
+    assert ok(r)
+
+    # sketch is named '{plane_name}_sketch' = 'extra_plane_sketch'
+    r = create_sketch_in_body(mock_ctx, conn, no_screenshot, doc, "host_plane", "extra_plane")
+    assert ok(r), f"create_sketch_in_body failed: {r}"
+
+    objects = conn.get_objects(doc)
+    names = [o["Name"] for o in objects]
+    assert "extra_plane_sketch" in names, f"extra_plane_sketch not in {names}"
+
+
+def test_groove(conn, doc, mock_ctx, no_screenshot):
+    # Build a base solid (disc-like: small square extruded)
+    r = create_datum_plane(mock_ctx, conn, no_screenshot, doc, "groove_plane", "xy", 0.0)
+    assert ok(r)
+    r = create_sketch_on_plane(mock_ctx, conn, no_screenshot, doc, "groove_plane")
+    assert ok(r)
+    # Rectangle offset from axis so groove cuts into it
+    _add_rect(conn, doc, "groove_plane_sketch", 10, 0, 60, 40)
+    r = extrude_sketch_bidirectional(mock_ctx, conn, no_screenshot, doc, "groove_plane_sketch", 20.0)
+    assert ok(r)
+
+    base_meas = conn.measure_object(doc, "groove_plane_solid")
+    base_vol = base_meas["data"].get("volume", base_meas["data"].get("Volume", 0))
+
+    # Add a groove sketch inside the same body
+    r = add_datum_plane_to_body(mock_ctx, conn, no_screenshot, doc, "groove_plane", "groove_cut_plane", "xy", 0.0)
+    assert ok(r)
+    # sketch named 'groove_cut_plane_sketch'
+    r = create_sketch_in_body(mock_ctx, conn, no_screenshot, doc, "groove_plane", "groove_cut_plane")
+    assert ok(r)
+    # Small rectangle for the groove profile (revolved around V_Axis)
+    _add_rect(conn, doc, "groove_cut_plane_sketch", 15, 0, 30, 10)
+
+    r = groove(mock_ctx, conn, no_screenshot, doc, "groove_cut_plane_sketch", axis="V_Axis", angle=360.0)
+    assert ok(r), f"groove failed: {r}"
+
+    after = conn.measure_object(doc, "groove_cut_plane_sketch_groove")
+    if after.get("success"):
+        after_vol = after["data"].get("volume", after["data"].get("Volume", 0))
+        assert after_vol < base_vol, f"Groove volume {after_vol} not less than base {base_vol}"
