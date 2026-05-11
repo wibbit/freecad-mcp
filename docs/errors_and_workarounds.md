@@ -136,6 +136,51 @@ doc.recompute()
 
 ---
 
+## `AttributeError: has no attribute 'getExpression'`
+
+**Tool**: Any `execute_code` call that tries to read an expression off an object  
+**Cause**: `getExpression()` does not exist on FreeCAD objects. Only `setExpression()` exists for writing.  
+**Fix**: Read `obj.ExpressionEngine` — it is a list of `(property, expression)` tuples. See `api_gotchas.md` for usage.
+
+---
+
+## `AttributeError: 'App.Document' object has no attribute 'State'`
+
+**Tool**: Any `execute_code` call that checks `doc.State`  
+**Cause**: `State` is a property of `DocumentObject` (a Box, Sketch, Pad, etc.) — not of the `Document` itself.  
+**Fix**: Call `obj.State` on a specific object, not on the document. Use `get_objects(doc_name)` to see `State` and `HasError` for all objects via the MCP layer.
+
+---
+
+## `TypeError: Invalid parameters: ('Radius', 0)` — Sketcher constraint
+
+**Tool**: Any `execute_code` call adding Sketcher constraints  
+**Cause**: `Sketcher.Constraint('Radius', edge_index)` is missing the required radius value as the third argument.  
+**Fix**: `Sketcher.Constraint('Radius', edge_index, value_mm)`. Constraints that carry a numeric value (`Radius`, `Distance`, `DistanceX`, `DistanceY`, `Angle`) always require the value as the last positional argument.
+
+---
+
+## `AttributeError: 'Part.LineSegment' object has no attribute 'Length'`
+
+**Tool**: Any `execute_code` call inspecting sketch geometry  
+**Cause**: `Part.LineSegment` (a geometry primitive) uses lowercase `.length`, not `.Length`. The uppercase convention applies to FreeCAD `DocumentObject` properties (e.g. `box.Length`), not to raw geometry objects.  
+**Fix**: Use `.length` (lowercase). Similarly, use `.startPoint` and `.endPoint` (camelCase) not `.StartPoint`.
+
+---
+
+## `RuntimeError: shape is invalid`
+
+**Tool**: Any `execute_code` call that computes or uses a shape after a failed sketch  
+**Cause**: The sketch was not properly solved — constraints are contradictory, over-determined, or the profile is not closed. A common trigger is a malformed Sketcher constraint (wrong argument count — see above).  
+**Fix**:
+1. Call `get_objects(doc_name)` and check `HasError` on the sketch object.
+2. Use `undo` to roll back the bad constraint.
+3. Fix the constraint and re-add it.
+4. Confirm the sketch is solved (no `HasError`) before retrying the 3D feature.  
+**Log to check**: FreeCAD addon log — look for the constraint or geometry error that preceded the `shape is invalid` line.
+
+---
+
 ## How to Read the Addon Log Efficiently
 
 The FreeCAD addon log (`/home/dfurlong/freecad_mcp.log`) is the most useful debugging tool. Key patterns to `grep` for:

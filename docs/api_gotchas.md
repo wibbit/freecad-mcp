@@ -162,3 +162,65 @@ The expression uses the **sheet's Name** (e.g. `"Params"`), not its label. After
 ## `copy_object` does not copy dependencies by default
 
 `doc.copyObject(obj, False)` — the `False` means "do not recursively copy dependencies". If the object references others (e.g. a fillet referencing a box), the copy will have broken references. The MCP `copy_object` tool defaults to recursive copy (`True`) to avoid this.
+
+---
+
+## Reading expressions on an object: use `ExpressionEngine`, not `getExpression`
+
+**Wrong**: `obj.getExpression("Length")` — raises `AttributeError: has no attribute 'getExpression'`  
+**Right**: read `obj.ExpressionEngine` — it is a list of `(property_name, expression_string)` tuples:
+
+```python
+for prop, expr in obj.ExpressionEngine:
+    print(f"{prop} = {expr}")
+```
+
+To check if a specific property has an expression: `dict(obj.ExpressionEngine).get("Length")`.  
+To set an expression: `obj.setExpression("Length", "Params.A1")` — this does exist.
+
+---
+
+## `Document.State` does not exist — only `DocumentObject.State` does
+
+**Wrong**: `doc.State` — raises `AttributeError: 'App.Document' object has no attribute 'State'`  
+**Right**: `obj.State` where `obj` is a document object (e.g. a Pad, Sketch, Box), not the document itself.
+
+`DocumentObject.State` returns a list such as `["Up-to-date"]` or `["Invalid"]`. The `get_object` and `get_objects` MCP tools expose this as the `State` and `HasError` fields.
+
+---
+
+## Sketcher `Constraint('Radius', ...)` requires geometry index and value
+
+**Wrong**: `Sketcher.Constraint('Radius', 0)` — raises `TypeError: Invalid parameters: ('Radius', 0)`  
+**Right**: `Sketcher.Constraint('Radius', edge_index, radius_value)`
+
+The `Radius` constraint (and `Distance`, `DistanceX`, `DistanceY`, `Angle`) requires both the geometry index **and** the numeric value as separate positional arguments:
+
+```python
+sketch.addConstraint(Sketcher.Constraint('Radius', 0, 25.0))   # edge 0, radius 25mm
+sketch.addConstraint(Sketcher.Constraint('Distance', 0, 1, 0, 1, 50.0))  # distance between points
+```
+
+`Coincident`, `Horizontal`, `Vertical`, `Tangent` take only geometry indices — no value argument.
+
+---
+
+## `Part.LineSegment` attributes are lowercase
+
+**Wrong**: `segment.Length` — raises `AttributeError: 'Part.LineSegment' object has no attribute 'Length'. Did you mean: 'length'?`  
+**Right**: `segment.length` (lowercase)
+
+`Part.LineSegment` geometry attributes that are lowercase: `.length`, `.startPoint`, `.endPoint`, `.parameterRange`.  
+Compare with `DocumentObject` properties like `box.Length` (uppercase) — those are FreeCAD properties set via the property system and follow a different convention.
+
+---
+
+## `RuntimeError: shape is invalid` after sketch operations
+
+This typically means the sketch could not be solved — constraints are over-determined, contradictory, or the profile is not closed. Common causes:
+
+- A `Radius` or `Distance` constraint was added with the wrong argument count (see above)
+- The sketch profile is not closed (missing a segment or coincident constraint to close the loop)
+- An extrusion or pocket was attempted on a sketch that has a red/unsolved indicator in FreeCAD
+
+**Fix**: call `get_objects` and check `HasError` on the sketch object. If `HasError` is `True`, fix the sketch geometry before attempting any 3D feature that depends on it. Use `undo` to roll back the bad constraint, then re-add it correctly.
