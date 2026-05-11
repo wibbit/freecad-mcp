@@ -130,3 +130,6 @@ class FreeCADConnection:
 
     def run_fem_analysis(self, doc_name: str, analysis_name: str, timeout: int = 600) -> dict[str, Any]:
         return self.server.run_fem_analysis(doc_name, analysis_name, timeout)
+
+    def get_freecad_errors(self, max_lines: int = 200) -> dict:
+        return self.server.get_freecad_errors(max_lines)

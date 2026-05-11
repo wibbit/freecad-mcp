@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2026-05-11
 
+### ✨ Added
+
+- **`get_freecad_errors`** — New MCP tool that reads FreeCAD's Report View panel content, returning error and warning lines without requiring copy-paste. Requires the Report View panel to be open in FreeCAD (View → Panels → Report View). Accepts `max_lines` parameter (default 200).
+
+### 🔧 Enhanced
+
+- **`execute_code` logging** — When `execute_code` raises an exception, the full traceback and the first 500 characters of the offending code are now written to the addon log file (`freecad_mcp.log`), not only to FreeCAD's internal console. Requires FreeCAD restart to take effect.
+
 ### 📚 Documentation
 
 - `docs/api_gotchas.md` — Added five new entries from live agent errors: `getExpression` vs `ExpressionEngine`, `Document.State` vs `DocumentObject.State`, Sketcher `Constraint('Radius', ...)` argument order, `Part.LineSegment.length` case sensitivity, `RuntimeError: shape is invalid` diagnosis.

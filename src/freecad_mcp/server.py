@@ -779,6 +779,37 @@ def get_freecad_status(ctx: Context) -> list[TextContent]:
 
 @mcp.tool()
 @_log_tool
+def get_freecad_errors(
+    ctx: Context,
+    max_lines: int = 200,
+) -> list[TextContent]:
+    """Read error and warning messages from FreeCAD's Report View panel.
+
+    Returns the most recent error/warning lines from FreeCAD's internal console.
+    Call this when execute_code reports a failure, when objects have HasError=True,
+    or at the start of a debugging session to see accumulated errors.
+
+    The Report View panel must be open in FreeCAD (View → Panels → Report View).
+
+    Args:
+        max_lines: Maximum number of error/warning lines to return (default 200).
+    """
+    freecad = get_freecad_connection()
+    res = freecad.get_freecad_errors(max_lines)
+    if res["success"]:
+        data = res["data"]
+        text = (
+            f"Report View — {data['total_error_lines']} error/warning lines "
+            f"(showing last {data['showing']}):\n\n"
+            + data["report_view_errors"]
+        )
+        return [TextContent(type="text", text=text)]
+    else:
+        raise Exception(f"Failed to read Report View: {res['error']}")
+
+
+@mcp.tool()
+@_log_tool
 def get_shape_topology(
     ctx: Context,
     doc_name: str,

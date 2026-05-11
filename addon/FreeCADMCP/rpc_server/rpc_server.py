@@ -423,6 +423,7 @@ class FreeCADRPC:
             except Exception:
                 tb = traceback.format_exc()
                 FreeCAD.Console.PrintError(f"Error executing Python code:\n{tb}\n")
+                _logger.error("execute_code FAIL:\n%s\nCode (first 500 chars):\n%s", tb, code[:500])
                 return tb
 
         rpc_request_queue.put(task)
@@ -452,6 +453,10 @@ class FreeCADRPC:
 
     def get_status(self) -> dict:
         rpc_request_queue.put(lambda: self._get_status_gui())
+        return rpc_response_queue.get(timeout=self.TIMEOUT)
+
+    def get_freecad_errors(self, max_lines: int = 200) -> dict:
+        rpc_request_queue.put(lambda: self._get_freecad_errors_gui(max_lines))
         return rpc_response_queue.get(timeout=self.TIMEOUT)
 
     def insert_part_from_library(self, relative_path):
@@ -1216,6 +1221,60 @@ class FreeCADRPC:
                     "active_body": active_body,
                     "rpc_port": 9875,
                     "timer_chain": "running",
+                },
+                "error": None,
+            }
+        except Exception as e:
+            return {"success": False, "data": None, "error": str(e)}
+
+    def _get_freecad_errors_gui(self, max_lines: int = 200) -> dict:
+        try:
+            from PySide2 import QtWidgets
+            mw = FreeCADGui.getMainWindow()
+            report_text = None
+
+            # Search all dock widgets for the Report View
+            for dw in mw.findChildren(QtWidgets.QDockWidget):
+                title = dw.windowTitle()
+                if "Report" in title or "report" in title.lower():
+                    te = dw.findChild(QtWidgets.QTextEdit)
+                    if te is not None:
+                        report_text = te.toPlainText()
+                        break
+
+            # Fallback: search any QTextEdit whose objectName contains Report
+            if report_text is None:
+                for te in mw.findChildren(QtWidgets.QTextEdit):
+                    name = te.objectName()
+                    if "Report" in name or "report" in name.lower():
+                        report_text = te.toPlainText()
+                        break
+
+            if report_text is None:
+                return {
+                    "success": False,
+                    "data": None,
+                    "error": "Report View widget not found — is the Report View panel open in FreeCAD?",
+                }
+
+            lines = report_text.splitlines()
+            # Return only lines that contain errors or warnings; fall back to tail
+            error_lines = [l for l in lines if any(
+                kw in l for kw in ("Error", "error", "Warning", "warning", "Traceback", "AttributeError",
+                                   "TypeError", "RuntimeError", "ValueError", "NameError", "KeyError",
+                                   "IndexError", "NotImplementedError", "Exception")
+            )]
+            if not error_lines:
+                # No filtered errors — return the full tail so caller sees recent activity
+                error_lines = lines
+
+            tail = error_lines[-max_lines:]
+            return {
+                "success": True,
+                "data": {
+                    "report_view_errors": "\n".join(tail),
+                    "total_error_lines": len(error_lines),
+                    "showing": len(tail),
                 },
                 "error": None,
             }
