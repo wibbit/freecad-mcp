@@ -129,6 +129,55 @@ End-to-end workflows that exercise multiple tools in sequence. Run these to catc
 4. `mirror_object("RegH", "Cyl", "YZ", "CylMirror", merge=True)`
 5. `measure_object("RegH", "CylMirror")` — verify volume ≈ 2× single cylinder (≈ 2×π×20²×100 ≈ 251327 mm³)
 
+### Scenario I: RPC queue corruption under GUI load
+*Validates: `_run_gui` drain fix — stale screenshot-check responses must not corrupt subsequent calls*
+
+**Background**: Before the fix, `get_active_screenshot` made a redundant `execute_code` RPC call to check view support. On a loaded GUI thread (complex recompute in progress), this call timed out after TIMEOUT seconds. The GUI thread still completed the task and put the result on the response queue; the next unrelated call (`get_objects`, `spreadsheet_write`, etc.) read this stale bool and failed with `'bool' object is not subscriptable`.
+
+**This test must be run via the MCP tool layer** (through an agent using the MCP tools), not by calling the XML-RPC server directly. The screenshot call is only made by the MCP `server.py` wrapper, not by `FreeCADConnection`.
+
+**Steps**:
+
+1. `create_document("RegI")`
+2. `execute_code` — create a `Spreadsheet::Sheet` named "Params" and write 30 aliased cells with computed values:
+   ```python
+   import FreeCAD as App
+   doc = App.getDocument("RegI")
+   sheet = doc.addObject("Spreadsheet::Sheet", "Params")
+   for i in range(30):
+       cell = f"A{i+1}"
+       sheet.set(cell, str((i + 1) * 10.0))
+       sheet.setAlias(cell, f"param_{i}")
+   doc.recompute()
+   print("SUCCESS")
+   ```
+3. `execute_code` — create a Part::Box with expression links to 3 spreadsheet cells, then recompute:
+   ```python
+   import FreeCAD as App
+   doc = App.getDocument("RegI")
+   box = doc.addObject("Part::Box", "ParamBox")
+   box.setExpression("Length", "<<Params>>.param_0")
+   box.setExpression("Width",  "<<Params>>.param_1")
+   box.setExpression("Height", "<<Params>>.param_2")
+   doc.recompute()
+   print("SUCCESS")
+   ```
+4. Run 10 more `execute_code` calls that each modify a spreadsheet cell and recompute — this keeps the GUI thread busy and gives the screenshot check the best chance of timing out:
+   ```python
+   # repeat 10 times with different cell values
+   sheet.set("A1", str(new_value))
+   doc.recompute()
+   print("SUCCESS")
+   ```
+5. Immediately after the final `execute_code`, call `get_objects("RegI")` — **must** return a list of dicts, not `'bool' object is not subscriptable`.
+6. Immediately call `spreadsheet_write("RegI", "Params", "B1", 999)` — **must** return `{"success": true}`, not a bool error.
+7. Immediately call `measure_object("RegI", "ParamBox")` — **must** return volume data.
+8. Immediately call `get_freecad_status()` — **must** return a status dict.
+
+**Pass criteria**: All four calls in steps 5–8 return valid dicts with `"success": true`. No `'bool' object is not subscriptable` error on any of them.
+
+**Failure signature** (pre-fix): One or more of steps 5–8 returns `'bool' object is not subscriptable`. Check `freecad_mcp.log` for `Drained stale RPC response` — if the drain is working, you will see this log line and the call will still succeed.
+
 ---
 
 ## Writing New Tests
