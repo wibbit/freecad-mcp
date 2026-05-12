@@ -341,14 +341,36 @@ def set_object_property(
 
 class FreeCADRPC:
     """RPC server for FreeCAD"""
-    TIMEOUT = 10
+    TIMEOUT = 30
+
+    def _run_gui(self, task, timeout=None):
+        """Dispatch a task to the GUI thread and wait for its result.
+
+        Drains any stale responses left by previously timed-out callers before
+        dispatching. Without this drain, a caller whose request timed out would
+        leave its eventual result sitting on rpc_response_queue, causing the
+        next unrelated RPC call to receive the wrong response — the root cause
+        of the 'bool object is not subscriptable' failure mode.
+        """
+        if timeout is None:
+            timeout = self.TIMEOUT
+        while not rpc_response_queue.empty():
+            try:
+                stale = rpc_response_queue.get_nowait()
+                _logger.warning(
+                    "Drained stale RPC response (a prior call timed out): %r",
+                    str(stale)[:120],
+                )
+            except queue.Empty:
+                break
+        rpc_request_queue.put(task)
+        return rpc_response_queue.get(timeout=timeout)
 
     def ping(self):
         return True
 
     def create_document(self, name="New_Document"):
-        rpc_request_queue.put(lambda: self._create_document_gui(name))
-        res = rpc_response_queue.get(timeout=self.TIMEOUT)
+        res = self._run_gui(lambda: self._create_document_gui(name))
         if res is True:
             return {"success": True, "data": {"document_name": name}, "error": None}
         else:
@@ -361,8 +383,7 @@ class FreeCADRPC:
             analysis=obj_data.get("Analysis", None),
             properties=obj_data.get("Properties", {}),
         )
-        rpc_request_queue.put(lambda: self._create_object_gui(doc_name, obj))
-        res = rpc_response_queue.get(timeout=self.TIMEOUT)
+        res = self._run_gui(lambda: self._create_object_gui(doc_name, obj))
         if res is True:
             return {"success": True, "data": {"object_name": obj.name}, "error": None}
         else:
@@ -373,16 +394,14 @@ class FreeCADRPC:
             name=obj_name,
             properties=properties.get("Properties", {}),
         )
-        rpc_request_queue.put(lambda: self._edit_object_gui(doc_name, obj))
-        res = rpc_response_queue.get(timeout=self.TIMEOUT)
+        res = self._run_gui(lambda: self._edit_object_gui(doc_name, obj))
         if res is True:
             return {"success": True, "data": {"object_name": obj.name}, "error": None}
         else:
             return {"success": False, "data": None, "error": res}
 
     def delete_object(self, doc_name: str, obj_name: str):
-        rpc_request_queue.put(lambda: self._delete_object_gui(doc_name, obj_name))
-        res = rpc_response_queue.get(timeout=self.TIMEOUT)
+        res = self._run_gui(lambda: self._delete_object_gui(doc_name, obj_name))
         if res is True:
             return {"success": True, "data": {"object_name": obj_name}, "error": None}
         else:
@@ -394,9 +413,8 @@ class FreeCADRPC:
             timeout_s = int(timeout)
         except (TypeError, ValueError):
             return {"success": False, "error": f"invalid timeout: {timeout!r}"}
-        rpc_request_queue.put(lambda: self._run_fem_analysis_gui(doc_name, analysis_name))
         try:
-            res = rpc_response_queue.get(timeout=timeout_s)
+            res = self._run_gui(lambda: self._run_fem_analysis_gui(doc_name, analysis_name), timeout=timeout_s)
         except queue.Empty:
             return {"success": False, "error": f"solver did not return within {timeout_s}s (still running on the GUI thread)"}
         if isinstance(res, dict):
@@ -426,8 +444,7 @@ class FreeCADRPC:
                 _logger.error("execute_code FAIL:\n%s\nCode (first 500 chars):\n%s", tb, code[:500])
                 return tb
 
-        rpc_request_queue.put(task)
-        res = rpc_response_queue.get(timeout=self.TIMEOUT)
+        res = self._run_gui(task)
         stdout = stdout_buf.getvalue()
         stderr = stderr_buf.getvalue()
         if res is True:
@@ -444,76 +461,59 @@ class FreeCADRPC:
             }
 
     def get_objects(self, doc_name):
-        rpc_request_queue.put(lambda: self._get_objects_gui(doc_name))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._get_objects_gui(doc_name))
 
     def get_object(self, doc_name, obj_name):
-        rpc_request_queue.put(lambda: self._get_object_gui(doc_name, obj_name))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._get_object_gui(doc_name, obj_name))
 
     def get_status(self) -> dict:
-        rpc_request_queue.put(lambda: self._get_status_gui())
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._get_status_gui())
 
     def get_freecad_errors(self, max_lines: int = 200) -> dict:
-        rpc_request_queue.put(lambda: self._get_freecad_errors_gui(max_lines))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._get_freecad_errors_gui(max_lines))
 
     def insert_part_from_library(self, relative_path):
-        rpc_request_queue.put(lambda: self._insert_part_from_library(relative_path))
-        res = rpc_response_queue.get(timeout=self.TIMEOUT)
+        res = self._run_gui(lambda: self._insert_part_from_library(relative_path))
         if res is True:
             return {"success": True, "data": None, "error": None}
         else:
             return {"success": False, "data": None, "error": res}
 
     def get_shape_topology(self, doc_name: str, obj_name: str) -> dict:
-        rpc_request_queue.put(lambda: self._get_shape_topology_gui(doc_name, obj_name))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._get_shape_topology_gui(doc_name, obj_name))
 
     def save_document(self, doc_name: str, path: str = "") -> dict:
-        rpc_request_queue.put(lambda: self._save_document_gui(doc_name, path))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._save_document_gui(doc_name, path))
 
     def load_document(self, path: str) -> dict:
-        rpc_request_queue.put(lambda: self._load_document_gui(path))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._load_document_gui(path))
 
     def measure_object(self, doc_name: str, obj_name: str) -> dict:
-        rpc_request_queue.put(lambda: self._measure_object_gui(doc_name, obj_name))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._measure_object_gui(doc_name, obj_name))
 
     def set_object_visibility(self, doc_name: str, obj_name: str, visible: bool) -> dict:
-        rpc_request_queue.put(lambda: self._set_object_visibility_gui(doc_name, obj_name, visible))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._set_object_visibility_gui(doc_name, obj_name, visible))
 
     def undo(self, doc_name: str, steps: int = 1) -> dict:
-        rpc_request_queue.put(lambda: self._undo_gui(doc_name, steps))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._undo_gui(doc_name, steps))
 
     def export_object(self, doc_name: str, obj_name: str, path: str, export_format: str) -> dict:
-        rpc_request_queue.put(lambda: self._export_object_gui(doc_name, obj_name, path, export_format))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._export_object_gui(doc_name, obj_name, path, export_format))
 
     def spreadsheet_read(self, doc_name: str, sheet_name: str, cell_range: str) -> dict:
-        rpc_request_queue.put(lambda: self._spreadsheet_read_gui(doc_name, sheet_name, cell_range))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._spreadsheet_read_gui(doc_name, sheet_name, cell_range))
 
     def spreadsheet_write(self, doc_name: str, sheet_name: str, cell: str, value) -> dict:
-        rpc_request_queue.put(lambda: self._spreadsheet_write_gui(doc_name, sheet_name, cell, value))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._spreadsheet_write_gui(doc_name, sheet_name, cell, value))
 
     def copy_object(self, doc_name: str, obj_name: str, new_name: str) -> dict:
-        rpc_request_queue.put(lambda: self._copy_object_gui(doc_name, obj_name, new_name))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._copy_object_gui(doc_name, obj_name, new_name))
 
     def create_techdraw_page(self, doc_name: str, page_name: str, template_path: str = "") -> dict:
-        rpc_request_queue.put(lambda: self._create_techdraw_page_gui(doc_name, page_name, template_path))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._create_techdraw_page_gui(doc_name, page_name, template_path))
 
     def add_view_to_techdraw_page(self, doc_name: str, page_name: str, obj_name: str, view_name: str, x: float = 100.0, y: float = 100.0, scale: float = 1.0) -> dict:
-        rpc_request_queue.put(lambda: self._add_view_to_techdraw_page_gui(doc_name, page_name, obj_name, view_name, x, y, scale))
-        return rpc_response_queue.get(timeout=self.TIMEOUT)
+        return self._run_gui(lambda: self._add_view_to_techdraw_page_gui(doc_name, page_name, obj_name, view_name, x, y, scale))
 
     def list_documents(self):
         return {"success": True, "data": list(FreeCAD.listDocuments().keys()), "error": None}
@@ -530,36 +530,25 @@ class FreeCADRPC:
         Returns a base64-encoded string of the screenshot or None if a screenshot
         cannot be captured (e.g., when in TechDraw or Spreadsheet view).
         """
-        # First check if the active view supports screenshots
-        def check_view_supports_screenshots():
+        # Check if the active view supports screenshots, then capture
+        def check_and_capture():
             try:
                 active_view = FreeCADGui.ActiveDocument.ActiveView
-                if active_view is None:
-                    FreeCAD.Console.PrintWarning("No active view available\n")
-                    return False
-                
-                view_type = type(active_view).__name__
-                has_save_image = hasattr(active_view, 'saveImage')
-                FreeCAD.Console.PrintMessage(f"View type: {view_type}, Has saveImage: {has_save_image}\n")
-                return has_save_image
-            except Exception as e:
-                FreeCAD.Console.PrintError(f"Error checking view capabilities: {e}\n")
-                return False
-                
-        rpc_request_queue.put(check_view_supports_screenshots)
-        supports_screenshots = rpc_response_queue.get(timeout=self.TIMEOUT)
-        
-        if not supports_screenshots:
-            FreeCAD.Console.PrintWarning("Current view does not support screenshots\n")
+                if active_view is None or not hasattr(active_view, 'saveImage'):
+                    return None
+            except Exception:
+                return None
+            return True
+
+        supports = self._run_gui(check_and_capture)
+        if not supports:
             return None
-            
-        # If view supports screenshots, proceed with capture
+
         fd, tmp_path = tempfile.mkstemp(suffix=".png")
         os.close(fd)
-        rpc_request_queue.put(
+        res = self._run_gui(
             lambda: self._save_active_screenshot(tmp_path, view_name, width, height, focus_object)
         )
-        res = rpc_response_queue.get(timeout=self.TIMEOUT)
         if res is True:
             try:
                 with open(tmp_path, "rb") as image_file:

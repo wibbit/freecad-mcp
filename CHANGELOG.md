@@ -5,6 +5,22 @@ All notable changes to FreeCAD MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-05-12
+
+### 🐛 Fixed
+
+- **RPC queue corruption** — The primary cause of `'bool' object is not subscriptable` on `get_objects`, `spreadsheet_write`, `save_document`, and most other non-`execute_code` tools. Root cause: `get_active_screenshot` in the MCP client made a redundant `execute_code` RPC call to check view support before the real screenshot call. If that check took longer than `TIMEOUT` seconds (common in flatpak), its result was orphaned on `rpc_response_queue` and picked up by the next unrelated RPC call. Fixed by:
+  1. Removing the redundant client-side `execute_code` check from `freecad_client.get_active_screenshot` — the server-side `get_active_screenshot` handler already performs the view check internally.
+  2. Adding `_run_gui()` helper to `FreeCADRPC` that drains any stale responses from `rpc_response_queue` before each new dispatch, preventing corruption from any future timeout scenario.
+  3. All 20 RPC handler methods now use `_run_gui()` instead of the bare `rpc_request_queue.put / rpc_response_queue.get` pattern.
+- **`TIMEOUT` increased from 10s to 30s** — 10 seconds was insufficient for FreeCAD running in a flatpak sandbox, where recomputes and GUI operations run measurably slower. 30 seconds is still responsive enough to detect real GUI deadlocks.
+
+### 🔧 Enhanced
+
+- **`get_active_screenshot` server-side** — Merged the redundant view-check sub-call into the main capture flow. The view check and screenshot capture are now two sequential `_run_gui` dispatches within the same RPC method, not two separate XML-RPC calls.
+
+---
+
 ## [Unreleased] - 2026-05-11
 
 ### ✨ Added

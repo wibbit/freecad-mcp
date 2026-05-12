@@ -5,28 +5,6 @@ from typing import Any
 
 logger = logging.getLogger("FreeCADMCPserver")
 
-_SCREENSHOT_SUPPORT_CHECK = """
-import FreeCAD
-import FreeCADGui
-
-if FreeCAD.Gui.ActiveDocument and FreeCAD.Gui.ActiveDocument.ActiveView:
-    view_type = type(FreeCAD.Gui.ActiveDocument.ActiveView).__name__
-
-    # These view types don't support screenshots
-    unsupported_views = ['SpreadsheetGui::SheetView', 'DrawingGui::DrawingView', 'TechDrawGui::MDIViewPage']
-
-    if view_type in unsupported_views or not hasattr(FreeCAD.Gui.ActiveDocument.ActiveView, 'saveImage'):
-        print("Current view does not support screenshots")
-        False
-    else:
-        print(f"Current view supports screenshots: {view_type}")
-        True
-else:
-    print("No active view")
-    False
-"""
-
-
 class FreeCADConnection:
     def __init__(self, host: str = "localhost", port: int = 9875):
         self.server = xmlrpc.client.ServerProxy(f"http://{host}:{port}", allow_none=True)
@@ -67,11 +45,6 @@ class FreeCADConnection:
         focus_object: str | None = None,
     ) -> str | None:
         try:
-            result = self.server.execute_code(_SCREENSHOT_SUPPORT_CHECK)
-            if not result.get("success", False) or "Current view does not support screenshots" in (result.get("data") or {}).get("output", ""):
-                logger.info("Screenshot unavailable in current view (likely Spreadsheet or TechDraw view)")
-                return None
-
             return self.server.get_active_screenshot(view_name, width, height, focus_object)
         except Exception as e:
             logger.error(f"Error getting screenshot: {e}")
