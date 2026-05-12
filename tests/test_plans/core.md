@@ -184,6 +184,17 @@ or check `Shape.isValid()` for validation.
 - **Test all views**: Isometric, Front, Top, Right, Back, Left, Bottom, Dimetric, Trimetric
 - **Edge cases**: focus_object that doesn't exist (should fit all)
 
+### 4.5 `get_freecad_errors`
+- **Signature**: `get_freecad_errors(max_lines: int = 200)`
+- **Returns**: Filtered error/warning lines from FreeCAD's Report View panel
+- **Requires**: Report View panel open in FreeCAD (View → Panels → Report View)
+- **Known**: ✅ Working
+- **Test**: Call after `execute_code` with intentional error; confirm the error appears in output
+- **Edge cases**:
+  - Report View closed → returns descriptive message, not error
+  - No errors in Report View → returns empty/no-errors message
+  - `max_lines` smaller than available errors → returns tail of log (most recent lines)
+
 ---
 
 ## 5. Output Capture Investigation

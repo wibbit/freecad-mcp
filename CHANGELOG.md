@@ -17,8 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📚 Documentation
 
-- `docs/api_gotchas.md` — Added five new entries from live agent errors: `getExpression` vs `ExpressionEngine`, `Document.State` vs `DocumentObject.State`, Sketcher `Constraint('Radius', ...)` argument order, `Part.LineSegment.length` case sensitivity, `RuntimeError: shape is invalid` diagnosis.
-- `docs/errors_and_workarounds.md` — Matching error entries for all five.
+- `docs/api_gotchas.md` — Added five new entries from live agent errors: `getExpression` vs `ExpressionEngine`, `Document.State` vs `DocumentObject.State`, Sketcher `Constraint('Radius', ...)` argument order, `Part.LineSegment.length` case sensitivity, `RuntimeError: shape is invalid` diagnosis. Expanded `Pad.Profile` entry with `PropertyLinkSub` tuple form and FreeCAD 1.0 context. Added three new entries: `PartDesign::Fillet` failure on multi-solid Body compound, `PartDesign::SubtractiveLoft` failure for conical flare geometry, and `execute_code` stdout not captured in flatpak installations.
+- `docs/errors_and_workarounds.md` — Matching error entries for all five. Added `get_freecad_errors` reference in the log-reading section. Added three new entries: `'bool' object is not subscriptable` from get_objects, PartDesign::Fillet silent failure on compound, SubtractiveLoft conical flare workaround, and flatpak stdout capture issue.
+- `docs/API_REFERENCE.md` — Added `get_freecad_errors` under new Debugging section.
+- `docs/session_guide.md` — Added "Reading FreeCAD Errors" section: when to call `get_freecad_errors`, prerequisites, and how it relates to log files.
+- `tests/test_plans/core.md` — Added section 4.5 `get_freecad_errors` with test cases and edge conditions.
+- `tests/test_basic_operations.py` — Added `test_get_freecad_errors`: triggers a sentinel error via `execute_code`, then confirms it appears in Report View output.
 
 ---
 

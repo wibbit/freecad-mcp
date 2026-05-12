@@ -156,3 +156,15 @@ def test_set_object_visibility(conn, doc):
     assert info.get("success")
     view = info.get("data", {}).get("ViewObject", {})
     assert view.get("Visibility") is False
+
+
+def test_get_freecad_errors(conn):
+    # Trigger a known error via execute_code, then confirm it appears in Report View.
+    conn.execute_code("raise RuntimeError('mcp_test_sentinel_error_xyz')")
+
+    result = conn.get_freecad_errors(max_lines=200)
+    assert result.get("success"), result.get("error")
+    output = result.get("data", {}).get("report_view_errors", "")
+    assert "mcp_test_sentinel_error_xyz" in output, (
+        f"Expected sentinel error in Report View output, got: {output[:300]}"
+    )

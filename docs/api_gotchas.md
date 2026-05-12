@@ -4,12 +4,21 @@ Behaviours that differ from what you would expect from the FreeCAD documentation
 
 ---
 
-## PartDesign Pad: use `Profile`, not `Sketch`
+## PartDesign Pad: use `Profile`, not `Sketch` (FreeCAD 1.0 API change)
 
-**Wrong**: `pad.Sketch = sketch_obj`  
-**Right**: `pad.Profile = sketch_obj`
+**Wrong**: `pad.Sketch = sketch_obj` — silently ignored in FreeCAD 1.x  
+**Right**: `pad.Profile = (sketch_obj, [''])` — a `PropertyLinkSub` 2-tuple
 
-The `Sketch` property existed in older FreeCAD versions and is now deprecated. Using it silently does nothing in FreeCAD 1.x — the pad will not extrude. `Profile` is the correct property name.
+In FreeCAD 0.x, the `PartDesign::Pad` profile reference was set via `pad.Sketch = sketch`. This property was renamed to `Profile` in FreeCAD 1.0. Assigning to `pad.Sketch` is silently ignored — no error is raised, but the pad never extrudes because no profile is linked.
+
+`Profile` accepts a `PropertyLinkSub` tuple: `(object, list_of_subname_strings)`. For a whole sketch (no specific subshape), use `(sketch, [''])`.
+
+```python
+pad = body.newObject("PartDesign::Pad", "Pad")
+pad.Profile = (sketch, [''])  # FreeCAD 1.0+ — correct
+pad.Length = 10.0
+doc.recompute()
+```
 
 ---
 
@@ -224,3 +233,56 @@ This typically means the sketch could not be solved — constraints are over-det
 - An extrusion or pocket was attempted on a sketch that has a red/unsolved indicator in FreeCAD
 
 **Fix**: call `get_objects` and check `HasError` on the sketch object. If `HasError` is `True`, fix the sketch geometry before attempting any 3D feature that depends on it. Use `undo` to roll back the bad constraint, then re-add it correctly.
+
+---
+
+## `PartDesign::Fillet` can fail on multi-solid Body compounds
+
+`PartDesign::Fillet` works correctly when the Body contains a single, well-formed solid feature chain. If the Body's tip feature is a compound (e.g. two disjoint solids merged by a boolean), PartDesign::Fillet may fail silently or produce invalid geometry.
+
+**Workaround**: fall back to shape-level filleting via `execute_code`:
+```python
+import Part
+solid = doc.getObject('MyPad')
+# Build edge list from topology — do not guess names
+edges = [solid.Shape.Edges[i] for i in [0, 3, 7]]
+result_shape = solid.Shape.makeFillet(2.0, edges)
+fillet = doc.addObject('Part::Feature', 'ManualFillet')
+fillet.Shape = result_shape
+doc.recompute()
+```
+
+This is distinct from the Body scope error (where `Part::Fillet` cannot *reference* an object inside a Body). Here the Body's shape is the input and is accessed via `.Shape` outside of the feature tree.
+
+---
+
+## `PartDesign::SubtractiveLoft` fails for simple flare geometry — use `Part::Cone` boolean cut
+
+`PartDesign::SubtractiveLoft` is designed for removing material along an arbitrary loft path between sketches. For simple conical flares (a circle enlarging to a larger circle along a straight axis), `SubtractiveLoft` can fail with solver errors or produce incorrect geometry.
+
+**Workaround**: use a `Part::Cone` boolean cut instead:
+```python
+import Part
+cone = doc.addObject('Part::Cone', 'FlareCutter')
+cone.Radius1 = 5.0   # narrow end
+cone.Radius2 = 20.0  # wide end
+cone.Height = 30.0
+cone.Placement = App.Placement(App.Vector(0, 0, -5), App.Rotation())
+doc.recompute()
+# Then use boolean_cut or Part::Cut to subtract the cone from the solid
+```
+
+Position and orient the cone so it overlaps the material to be removed, then subtract it with `boolean_cut`.
+
+---
+
+## `execute_code` stdout capture depends on FreeCAD installation type
+
+In standard FreeCAD installations, `print()` output is captured and returned in the `execute_code` response. In FreeCAD installed as a **flatpak**, the Python process runs inside a sandboxed environment where `sys.stdout` may not be captured by the RPC server, causing `print()` output to silently disappear.
+
+**Reliable alternatives in all environments**:
+- `raise Exception("result: " + str(value))` — exceptions are always surfaced
+- After the code runs, call `get_freecad_errors` to check the Report View for any output FreeCAD wrote to its console
+- Check the addon log (`freecad_mcp.log`) for `execute_code` call results
+
+**Detection**: run `conn.execute_code("print('HELLO')")` and check if `"HELLO"` appears in the response `data.output`. If it does not, your FreeCAD environment does not capture stdout reliably.

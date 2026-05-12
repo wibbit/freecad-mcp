@@ -94,6 +94,25 @@ Do not retry hanging tool calls in a loop — that will not resolve a deadlock.
 
 ---
 
+## Reading FreeCAD Errors
+
+When something goes wrong — a tool reports success but the model looks wrong, a recompute fails silently, or `execute_code` produces unexpected results — call `get_freecad_errors` before reaching for the log files.
+
+```json
+{ "tool": "get_freecad_errors", "max_lines": 100 }
+```
+
+This reads the Report View panel (View → Panels → Report View) and returns only error and warning lines. It is faster than copy-pasting from the FreeCAD window and captures errors that don't appear in the MCP tool response.
+
+**When to call it:**
+- After any `execute_code` that behaves unexpectedly.
+- When an object shows a yellow warning indicator in the model tree.
+- When a dedicated tool (fillet, pocket, loft, etc.) completes but `get_objects` shows `HasError: true`.
+
+**Prerequisite**: The Report View panel must be open in FreeCAD. If it's not: View → Panels → Report View.
+
+---
+
 ## Debugging with Logs
 
 Three log files cover the full stack. Consult them when a tool fails unexpectedly.

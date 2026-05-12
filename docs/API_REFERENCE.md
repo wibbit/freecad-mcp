@@ -768,6 +768,38 @@ List available parts in library.
 
 ---
 
+## Debugging
+
+### `get_freecad_errors`
+
+Read error and warning lines from FreeCAD's Report View panel without copy-pasting.
+
+**Parameters:**
+- `max_lines` (int, optional): Maximum number of lines to return (default: 200)
+
+**Returns:**
+- Text block of error/warning lines from the Report View, or a message indicating the panel is empty or closed.
+
+**Requirements:**
+- FreeCAD must be running with a GUI (not headless).
+- The Report View panel must be open: **View → Panels → Report View**.
+
+**Example:**
+```json
+{
+  "max_lines": 100
+}
+```
+
+**When to use:**
+- After any `execute_code` call that behaved unexpectedly — errors printed to FreeCAD's console appear here.
+- When FreeCAD shows a yellow warning indicator on an object in the model tree.
+- When a tool reports success but the model looks wrong — FreeCAD may have silently logged a recompute error.
+
+**Note:** Only error (`[Err]`) and warning (`[Wrn]`) lines are returned. Info (`[Msg]`) and log (`[Log]`) lines are filtered out. If the Report View is closed or empty, the tool returns a descriptive message rather than failing.
+
+---
+
 ## Error Handling
 
 All tools return consistent response format:

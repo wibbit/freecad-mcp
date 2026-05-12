@@ -4,6 +4,15 @@ Indexed by error symptom. For each error: what caused it, how to fix it, and whi
 
 ---
 
+## `'bool' object is not subscriptable` from `get_objects` or `get_object`
+
+**Tools**: `get_object`, `get_objects`  
+**Cause**: A GUI task in the FreeCAD addon crashed before it could return a proper response dict. The RPC layer received a bare `False` (the exception-path sentinel) instead of `{"success": ..., "data": ...}`. The MCP client then tried to do `result["success"]` on a bool, raising this error.  
+**Fix**: This was an internal bug; current versions wrap all GUI task results in a proper dict. If still seeing it, update the addon. Meanwhile, check the FreeCAD addon log for the underlying exception that caused the task to fail before returning.  
+**Log to check**: FreeCAD addon log (`/home/dfurlong/freecad_mcp.log`) — look for `GUI task error:` immediately before the timestamp of the failing call.
+
+---
+
 ## "string indices must be integers, not 'str'"
 
 **Tools**: `get_object`, `get_objects`  
@@ -178,6 +187,74 @@ doc.recompute()
 3. Fix the constraint and re-add it.
 4. Confirm the sketch is solved (no `HasError`) before retrying the 3D feature.  
 **Log to check**: FreeCAD addon log — look for the constraint or geometry error that preceded the `shape is invalid` line.
+
+---
+
+## `PartDesign::Fillet` fails silently on multi-solid Body compound
+
+**Tools**: `add_fillet` (Body context), manual `execute_code`  
+**Symptom**: `add_fillet` completes but the result has `HasError: true`, or the fillet shape looks wrong/missing.  
+**Cause**: `PartDesign::Fillet` expects the Body tip to be a single, well-formed solid. If the Body contains a multi-solid compound (from a merge or a boolean that produced disjoint geometry), the fillet operation fails.  
+**Fix**: Use shape-level filleting via `execute_code` instead:
+```python
+import Part
+solid = doc.getObject('MyPad')
+edges = [solid.Shape.Edges[i] for i in edge_indices]  # from get_shape_topology
+result = solid.Shape.makeFillet(radius, edges)
+out = doc.addObject('Part::Feature', 'FilletResult')
+out.Shape = result
+doc.recompute()
+```
+This bypasses PartDesign's feature tree and works directly on the shape. The result is a `Part::Feature` outside the Body.  
+**Log to check**: FreeCAD addon log — look for the fillet object's `State` in the response, or call `get_freecad_errors` to see the recompute error.
+
+---
+
+## `PartDesign::SubtractiveLoft` fails for conical flare geometry
+
+**Tool**: Any SubtractiveLoft call targeting a simple conical flare  
+**Symptom**: Solver error during recompute, or the subtracted shape is geometrically wrong.  
+**Cause**: `PartDesign::SubtractiveLoft` uses FreeCAD's loft solver, which can fail for degenerate or nearly-straight loft paths. A simple expanding circle (cone) is such a degenerate case.  
+**Fix**: Use `Part::Cone` as a cutter with `boolean_cut`:
+```python
+# Create a cone positioned to cover the flare volume
+cone = doc.addObject('Part::Cone', 'FlareCutter')
+cone.Radius1 = inner_radius
+cone.Radius2 = outer_radius
+cone.Height = flare_depth
+cone.Placement = App.Placement(App.Vector(x, y, z), App.Rotation())
+doc.recompute()
+# Then subtract it from the main solid
+```
+Pass `cone.Name` as the tool in `boolean_cut`. The boolean-based approach is more robust than the loft solver for axially symmetric geometry.  
+**Log to check**: FreeCAD addon log — look for the SubtractiveLoft recompute error in the Report View via `get_freecad_errors`.
+
+---
+
+## `execute_code` `print()` output not captured (flatpak installations)
+
+**Tool**: `execute_code`  
+**Symptom**: Code runs without error, but the response `data.output` is empty even though the code contained `print()` calls.  
+**Cause**: FreeCAD installed as a flatpak runs in a sandboxed environment where `sys.stdout` may not be the same file descriptor captured by the RPC server. `print()` output goes to the sandboxed process's stdout rather than being returned in the response.  
+**Detection**: run `execute_code("print('HELLO')")` — if `"HELLO"` is absent from the response, stdout is not captured.  
+**Fix**:
+- Use `raise Exception("result: " + str(value))` for output that must be returned — exceptions are always captured.
+- Call `get_freecad_errors` after the code runs; FreeCAD's Report View may contain output written via `FreeCAD.Console.PrintMessage`.
+- Check the addon log (`freecad_mcp.log`) for the full execute_code response.
+
+---
+
+## Accessing FreeCAD Errors Without Copy-Paste
+
+Use the `get_freecad_errors` MCP tool to read the Report View panel directly. It returns filtered error and warning lines without requiring you to switch to FreeCAD and copy-paste.
+
+```json
+{ "tool": "get_freecad_errors", "max_lines": 100 }
+```
+
+Call this first whenever a tool behaves unexpectedly. The Report View captures errors from recomputes, constraint failures, and `execute_code` tracebacks that are not surfaced in the MCP response. Requires the Report View panel to be open (View → Panels → Report View).
+
+When `execute_code` raises an exception, the full traceback is also written to `freecad_mcp.log` — see below for how to read that log efficiently.
 
 ---
 
