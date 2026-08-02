@@ -11,7 +11,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 UPSTREAM_COPYRIGHT = "Copyright (c) 2025 Shirokuma (k tanaka)"
-MAINTAINER_COPYRIGHT = "Copyright (c) 2025-2026 Douglas Furlong"
+MAINTAINER_COPYRIGHT = "Copyright (c) 2026 Douglas Furlong"
+CONTRIBUTORS_COPYRIGHT = "Copyright (c) 2025-2026 freecad-mcp contributors"
 
 
 def read(relpath: str) -> str:
@@ -25,6 +26,10 @@ class TestLicence:
 
     def test_maintainer_copyright_present(self):
         assert MAINTAINER_COPYRIGHT in read("LICENSE")
+
+    def test_contributors_copyright_present(self):
+        """Bruno and MichaelZag retain copyright in their commits (no CLA)."""
+        assert CONTRIBUTORS_COPYRIGHT in read("LICENSE")
 
     def test_original_copyright_precedes_maintainer(self):
         licence = read("LICENSE")
