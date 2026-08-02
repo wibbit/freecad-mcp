@@ -32,7 +32,7 @@ Usually: `C:\Users\YourName\AppData\Roaming\FreeCAD\Mod\`
 
 ```bash
 # Clone the repository
-git clone https://github.com/neka-nat/freecad-mcp.git
+git clone https://codeberg.org/wibbit/freecad-mcp.git
 cd freecad-mcp
 
 # Copy addon (adjust path for your OS)

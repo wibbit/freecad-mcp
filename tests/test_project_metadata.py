@@ -218,3 +218,8 @@ class TestClientNeutrality:
 
     def test_quickstart_documents_claude_code(self):
         assert "claude mcp add" in read("docs/QUICKSTART.md")
+
+    def test_no_doc_clones_from_upstream(self):
+        """Upstream may be credited as origin, never used as the clone source."""
+        for path in DOC_FILES:
+            assert "git clone https://github.com/neka-nat/freecad-mcp.git" not in read(path), path
