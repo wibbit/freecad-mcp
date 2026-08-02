@@ -76,11 +76,17 @@ all remain valid. **This migration breaks nothing in the live setup.**
 ### 3. Attribution
 
 - **`LICENSE`** — the original copyright line is preserved verbatim and never reworded.
-  A second copyright line is added for the maintainer, defaulting to the git-configured
-  identity: `Copyright (c) 2026 wibbit`. See Open questions.
+  A second copyright line is added beneath it:
+
+  ```
+  Copyright (c) 2025-2026 Douglas Furlong
+  ```
+
+  The year range reflects the span of fork contributions (2025-11-05 to 2026-08-02).
 - **README "Origins" section** — credits Shirokuma (k tanaka) by name, links upstream, and
   states plainly that the project began as a fork and has since diverged.
-- **`pyproject.toml`** — maintainer listed as author; upstream credited in the description.
+- **`pyproject.toml`** — `authors` becomes `Douglas Furlong` (currently `k-tanaka`, inherited
+  from upstream); upstream credited in the description instead.
 - **Fork contributors** — Martin Bruno (7 commits) and MichaelZag (2 commits) credited.
   They contributed to this fork, not upstream, so upstream's contributor list does not
   cover them.
@@ -217,13 +223,6 @@ Per `CLAUDE.md`, every change carries its documentation and test updates in the 
 
 No test changes are anticipated: this migration alters metadata, documentation and hosting,
 and does not touch the module, entry point, addon, or any tool implementation.
-
-## Open questions
-
-1. **Copyright attribution name.** The `LICENSE` addition defaults to `wibbit`, matching the
-   git-configured `user.name`. A legal name (Douglas Furlong) would also be valid and is
-   arguably more conventional for a copyright notice. Either works; this is a personal
-   identity choice, not a technical one, and is confirmed before `LICENSE` is edited.
 
 ## Success criteria
 
