@@ -40,11 +40,12 @@ FreeCAD Addon directory is
   * Ubuntu: `~/.FreeCAD/Mod/` or `~/snap/freecad/common/Mod/` (if you install FreeCAD from snap)
   * Debian: `~/.local/share/FreeCAD/Mod`
   * Arch / CachyOS (FreeCAD 1.1 from `extra/freecad`): `~/.local/share/FreeCAD/v1-1/Mod/`
+  * Flatpak: `~/.var/app/org.freecad.FreeCAD/data/FreeCAD/v1-1/Mod/`
 
 Please put `addon/FreeCADMCP` directory to the addon directory.
 
 ```bash
-git clone https://github.com/neka-nat/freecad-mcp.git
+git clone https://codeberg.org/wibbit/freecad-mcp.git
 cd freecad-mcp
 
 # For Linux (Ubuntu/Debian)
@@ -53,6 +54,10 @@ cp -r addon/FreeCADMCP ~/.FreeCAD/Mod/
 # For Linux (Arch/CachyOS, FreeCAD 1.1 from extra/freecad)
 mkdir -p ~/.local/share/FreeCAD/v1-1/Mod/
 cp -r addon/FreeCADMCP ~/.local/share/FreeCAD/v1-1/Mod/
+
+# For Linux (Flatpak)
+mkdir -p ~/.var/app/org.freecad.FreeCAD/data/FreeCAD/v1-1/Mod/
+cp -r addon/FreeCADMCP ~/.var/app/org.freecad.FreeCAD/data/FreeCAD/v1-1/Mod/
 
 # For macOS (FreeCAD 1.1)
 cp -r addon/FreeCADMCP ~/Library/Application\ Support/FreeCAD/v1-1/Mod/
@@ -78,11 +83,23 @@ The setting is saved to `freecad_mcp_settings.json` and persists across sessions
 
 You can disable it at any time by unchecking **Auto-Start Server** in the same menu.
 
-## Setting up Claude Desktop
+## Setting up an MCP client
 
 Pre-installation of the [uvx](https://docs.astral.sh/uv/guides/tools/) is required.
 
-And you need to edit Claude Desktop config file, `claude_desktop_config.json`.
+Then configure your MCP client.
+
+### Claude Code (CLI)
+
+```bash
+claude mcp add freecad -- uvx freecad-mcp
+```
+
+Or edit `~/.claude.json` directly, using the same `mcpServers` block shown below.
+
+### Claude Desktop
+
+Edit `claude_desktop_config.json`:
 
 For user.
 
@@ -120,7 +137,7 @@ For developer.
 First, you need clone this repository.
 
 ```bash
-git clone https://github.com/neka-nat/freecad-mcp.git
+git clone https://codeberg.org/wibbit/freecad-mcp.git
 ```
 
 ```json
@@ -175,6 +192,27 @@ Pass the `--host` flag with the IP address or hostname of the machine running Fr
 ```
 
 The `--host` value is validated on startup — it must be a valid IPv4/IPv6 address or hostname.
+
+## Features
+
+| Group | Covers |
+|---|---|
+| Documents & objects | create/load/save/close, object CRUD, rename, copy, visibility, undo, status |
+| Sketching | sketches on plane/face/body, datum planes, contour building, attachment |
+| Sketch-based features | pad/extrude (bidirectional), pocket, groove |
+| Solid modelling | loft, revolve, sweep, tube, 3D splines, fillet, chamfer, shell |
+| Transform & pattern | transform, align, mirror, linear and circular patterns, reference planes/axes |
+| Booleans | union, cut, intersection |
+| Assembly | Assembly3 (constraints + solver), Assembly4 (LCS-based), parts library, BOM, assembly export |
+| FEM | CalculiX-driven stress analysis |
+| TechDraw | pages, views, dimensions |
+| Import & export | STEP, DXF, airfoil profiles, object export |
+| Inspection | viewport capture, shape topology, measurement, FreeCAD error log access |
+| Spreadsheets | read and write |
+| Escape hatch | `execute_code` for operations without a dedicated tool |
+| Guided prompts | workflow prompts for session startup, sketching, booleans, assembly, primitives and FEM |
+
+Full signatures and examples: [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md).
 
 ## Tools
 

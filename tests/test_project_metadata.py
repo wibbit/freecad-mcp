@@ -127,3 +127,46 @@ class TestReadmeAttribution:
 
     def test_states_no_affiliation(self):
         assert "not affiliated" in read("README.md").lower()
+
+
+class TestReadmeContent:
+    def test_clone_urls_point_at_codeberg(self):
+        readme = read("README.md")
+        assert "git clone https://codeberg.org/wibbit/freecad-mcp.git" in readme
+        assert "git clone https://github.com/neka-nat/freecad-mcp.git" not in readme
+
+    def test_documents_flatpak_addon_path(self):
+        assert "~/.var/app/org.freecad.FreeCAD/data/FreeCAD/v1-1/Mod/" in read("README.md")
+
+    def test_retains_claude_desktop_setup(self):
+        """Desktop config paths are correct for Desktop users and must survive."""
+        assert "claude_desktop_config.json" in read("README.md")
+
+    def test_documents_claude_code_setup(self):
+        readme = read("README.md")
+        assert "Claude Code" in readme
+        assert "claude mcp add" in readme
+
+    def test_has_features_section(self):
+        assert "## Features" in read("README.md")
+
+    def test_features_cover_each_capability_group(self):
+        readme = read("README.md")
+        for group in [
+            "Documents & objects",
+            "Sketching",
+            "Solid modelling",
+            "Booleans",
+            "Assembly",
+            "FEM",
+            "TechDraw",
+            "Import & export",
+            "Inspection",
+            "Spreadsheets",
+        ]:
+            assert group in readme, f"missing feature group: {group}"
+
+    def test_no_hard_tool_count(self):
+        """Counts go stale on every tool added."""
+        import re
+        assert not re.search(r"\b\d{2,}\s+tools\b", read("README.md"))
