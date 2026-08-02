@@ -133,7 +133,7 @@ Example lines:
 ```
 
 ### MCP server log — tool layer activity
-**Path**: stdout of the `freecad-mcp` process (captured by Claude Desktop, OpenCode, or your MCP client's log)
+**Path**: stdout of the `freecad-mcp` process (captured by Claude Code, Claude Desktop, OpenCode, or your MCP client's log)
 
 **Contains**: Each MCP tool call entry with parameters, duration, and whether a screenshot was included in the response.
 

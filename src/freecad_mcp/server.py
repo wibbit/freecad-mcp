@@ -3066,7 +3066,7 @@ def main():
 
     if not hasattr(sys.stdin, "buffer"):
         print(
-            "ERROR: freecad-mcp must be launched as a subprocess by an MCP client (e.g. Claude Desktop, opencode).\n"
+            "ERROR: freecad-mcp must be launched as a subprocess by an MCP client (e.g. Claude Code, Claude Desktop, opencode).\n"
             "       The stdio transport requires a real stdin pipe — running it directly in a shell or backgrounded is not supported.",
             file=sys.stderr,
         )

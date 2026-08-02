@@ -170,3 +170,51 @@ class TestReadmeContent:
         """Counts go stale on every tool added."""
         import re
         assert not re.search(r"\b\d{2,}\s+tools\b", read("README.md"))
+
+
+DOC_FILES = [
+    "README.md",
+    "docs/QUICKSTART.md",
+    "docs/USER_GUIDE.md",
+    "docs/session_guide.md",
+    "CONTRIBUTING.md",
+]
+
+
+class TestClientNeutrality:
+    def test_no_doc_points_issues_at_upstream(self):
+        for path in DOC_FILES:
+            assert "github.com/neka-nat/freecad-mcp/issues" not in read(path), path
+
+    def test_issue_links_point_at_codeberg(self):
+        for path in ["docs/QUICKSTART.md", "docs/USER_GUIDE.md"]:
+            assert f"{CODEBERG_URL}/issues" in read(path), path
+
+    def test_server_error_message_lists_claude_code(self):
+        source = read("src/freecad_mcp/server.py")
+        assert "Claude Code" in source
+
+    def test_session_guide_log_line_lists_claude_code(self):
+        """The client list on the log-capture line, not merely anywhere in the file.
+
+        `session_guide.md:4` already mentions Claude Code, so a whole-file check
+        would pass without the line 136 edit ever being made.
+        """
+        line = next(
+            l for l in read("docs/session_guide.md").splitlines()
+            if "stdout of the `freecad-mcp` process" in l
+        )
+        assert "Claude Code" in line
+
+    def test_user_guide_intro_is_client_neutral(self):
+        """The opening description must not imply Desktop is the only client."""
+        intro = read("docs/USER_GUIDE.md")[:2000]
+        assert "MCP client" in intro
+
+    def test_quickstart_retains_desktop_config_paths(self):
+        """Desktop paths are accurate for Desktop users; supplement, never delete."""
+        quickstart = read("docs/QUICKSTART.md")
+        assert "claude_desktop_config.json" in quickstart
+
+    def test_quickstart_documents_claude_code(self):
+        assert "claude mcp add" in read("docs/QUICKSTART.md")

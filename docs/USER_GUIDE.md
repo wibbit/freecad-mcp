@@ -1,6 +1,6 @@
 # FreeCAD MCP User Guide
 
-Complete guide to using FreeCAD MCP with Claude Desktop.
+Complete guide to using FreeCAD MCP with an MCP client such as Claude Code or Claude Desktop.
 
 ## Table of Contents
 
@@ -16,7 +16,7 @@ Complete guide to using FreeCAD MCP with Claude Desktop.
 
 ## Introduction
 
-FreeCAD MCP enables you to control FreeCAD through Claude Desktop using natural language. Instead of learning complex CAD interfaces, simply describe what you want to create, and Claude will generate the appropriate FreeCAD commands.
+FreeCAD MCP enables you to control FreeCAD through an MCP client using natural language. Instead of learning complex CAD interfaces, simply describe what you want to create, and Claude will generate the appropriate FreeCAD commands.
 
 ### What You Can Do
 
@@ -31,7 +31,7 @@ FreeCAD MCP enables you to control FreeCAD through Claude Desktop using natural 
 ### System Architecture
 
 ```
-Claude Desktop (User Interface)
+MCP client (Claude Code, Claude Desktop, …)
     ↓ Natural Language
 Model Context Protocol (MCP)
     ↓ Tool Calls
@@ -49,9 +49,9 @@ FreeCAD (CAD Engine)
 Before starting, ensure you have:
 - ✅ FreeCAD 0.21+ installed
 - ✅ Python 3.10+ installed
-- ✅ Claude Desktop installed
+- ✅ An MCP client installed (Claude Code or Claude Desktop)
 - ✅ FreeCAD MCP addon installed
-- ✅ Claude Desktop configured
+- ✅ Your MCP client configured
 
 See [Quick Start Guide](QUICKSTART.md) for installation instructions.
 
@@ -566,7 +566,7 @@ Assembly
    - Check for error messages
 
 3. **GitHub Issues**
-   - [Report bugs](https://github.com/neka-nat/freecad-mcp/issues)
+   - [Report bugs](https://codeberg.org/wibbit/freecad-mcp/issues)
    - Search existing issues
 
 4. **FreeCAD Forum**

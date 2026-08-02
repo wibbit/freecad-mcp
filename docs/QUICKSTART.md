@@ -6,7 +6,7 @@ Get started with FreeCAD MCP in 5 minutes!
 
 - ✅ Python 3.10 or higher
 - ✅ FreeCAD 0.21 or higher installed
-- ✅ Claude Desktop installed
+- ✅ An MCP client installed (Claude Code or Claude Desktop)
 
 ## Step 1: Install FreeCAD Addon (2 minutes)
 
@@ -57,7 +57,17 @@ cp -r addon/FreeCADMCP ~/.FreeCAD/Mod/
 
 ![Start Server](../assets/start_rpc_server.png)
 
-## Step 3: Configure Claude Desktop (1 minute)
+## Step 3: Configure your MCP client (1 minute)
+
+### Claude Code (CLI)
+
+```bash
+claude mcp add freecad -- uvx freecad-mcp
+```
+
+That is the whole setup — skip to Step 4.
+
+### Claude Desktop
 
 ### Find Config File
 
@@ -109,7 +119,7 @@ Close and reopen Claude Desktop for changes to take effect.
 
 ## Step 4: Test It! (1 minute)
 
-Open Claude Desktop and try these commands:
+In your MCP client, try these commands:
 
 ### Test 1: Simple Box
 ```
@@ -201,7 +211,7 @@ Create a radial engine cylinder arrangement:
 
 ## Getting Help
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/neka-nat/freecad-mcp/issues)
+- **GitHub Issues**: [Report bugs or request features](https://codeberg.org/wibbit/freecad-mcp/issues)
 - **Documentation**: Check [User Guide](USER_GUIDE.md)
 - **FreeCAD Forum**: [Ask FreeCAD questions](https://forum.freecad.org/)
 
