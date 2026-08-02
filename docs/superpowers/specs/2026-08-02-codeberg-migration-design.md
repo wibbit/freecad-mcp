@@ -76,13 +76,18 @@ all remain valid. **This migration breaks nothing in the live setup.**
 ### 3. Attribution
 
 - **`LICENSE`** — the original copyright line is preserved verbatim and never reworded.
-  A second copyright line is added beneath it:
+  Two lines are added beneath it:
 
   ```
-  Copyright (c) 2025-2026 Douglas Furlong
+  Copyright (c) 2026 Douglas Furlong
+  Copyright (c) 2025-2026 freecad-mcp contributors
   ```
 
-  The year range reflects the span of fork contributions (2025-11-05 to 2026-08-02).
+  Years are derived per author, not from the fork's overall span. The maintainer's earliest
+  commit is 2026, so **2026 alone** is correct for that line — an earlier start year would
+  claim a period in which another contributor, not the maintainer, did the work. The
+  contributors line covers Martin Bruno and MichaelZag, who under MIT retain copyright in
+  their own contributions (there is no CLA), and spans 2025-2026 accordingly.
 - **README "Origins" section** — credits Shirokuma (k tanaka) by name, links upstream, and
   states plainly that the project began as a fork and has since diverged.
 - **`pyproject.toml`** — `authors` becomes `Douglas Furlong` (currently `k-tanaka`, inherited

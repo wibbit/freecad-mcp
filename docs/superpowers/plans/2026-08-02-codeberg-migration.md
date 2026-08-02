@@ -133,7 +133,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 UPSTREAM_COPYRIGHT = "Copyright (c) 2025 Shirokuma (k tanaka)"
-MAINTAINER_COPYRIGHT = "Copyright (c) 2025-2026 Douglas Furlong"
+MAINTAINER_COPYRIGHT = "Copyright (c) 2026 Douglas Furlong"
+CONTRIBUTORS_COPYRIGHT = "Copyright (c) 2025-2026 freecad-mcp contributors"
 
 
 def read(relpath: str) -> str:
@@ -147,6 +148,10 @@ class TestLicence:
 
     def test_maintainer_copyright_present(self):
         assert MAINTAINER_COPYRIGHT in read("LICENSE")
+
+    def test_contributors_copyright_present(self):
+        """Bruno and MichaelZag retain copyright in their commits (no CLA)."""
+        assert CONTRIBUTORS_COPYRIGHT in read("LICENSE")
 
     def test_original_copyright_precedes_maintainer(self):
         licence = read("LICENSE")
@@ -163,9 +168,9 @@ class TestLicence:
 uv run --with pytest python -m pytest tests/test_project_metadata.py -v
 ```
 
-Expected: **2 failed, 2 passed.** `test_original_copyright_preserved_verbatim` and `test_still_mit`
-pass (already true); `test_maintainer_copyright_present` and
-`test_original_copyright_precedes_maintainer` fail on the missing maintainer line.
+Expected: **3 failed, 2 passed.** `test_original_copyright_preserved_verbatim` and `test_still_mit`
+pass (already true); `test_maintainer_copyright_present`, `test_contributors_copyright_present`
+and `test_original_copyright_precedes_maintainer` fail on the missing lines.
 
 - [ ] **Step 3: Add the maintainer copyright line**
 
@@ -179,10 +184,16 @@ to:
 
 ```
 Copyright (c) 2025 Shirokuma (k tanaka)
-Copyright (c) 2025-2026 Douglas Furlong
+Copyright (c) 2026 Douglas Furlong
+Copyright (c) 2025-2026 freecad-mcp contributors
 ```
 
 Change nothing else in the file.
+
+**Why these exact years.** The maintainer's earliest commit is 2026-05-08, so 2026 alone is
+correct for that line; the fork's 2025 commits are Martin Bruno's, not the maintainer's. The
+contributors line covers Bruno (2025-11) and MichaelZag (2026-02), who retain copyright in
+their own contributions under MIT as there is no CLA.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
@@ -190,7 +201,7 @@ Change nothing else in the file.
 uv run --with pytest python -m pytest tests/test_project_metadata.py -v
 ```
 
-Expected: 4 passed.
+Expected: 5 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -355,7 +366,7 @@ Changelog = "https://codeberg.org/wibbit/freecad-mcp/src/branch/main/CHANGELOG.m
 uv run --with pytest python -m pytest tests/test_project_metadata.py -v
 ```
 
-Expected: 11 passed.
+Expected: 12 passed.
 
 - [ ] **Step 5: Verify the package still builds**
 
@@ -496,7 +507,7 @@ The original MIT licence and copyright notice are retained in full — see
 uv run --with pytest python -m pytest tests/test_project_metadata.py -v
 ```
 
-Expected: 20 passed.
+Expected: 21 passed.
 
 - [ ] **Step 6: Commit**
 
@@ -671,7 +682,7 @@ Full signatures and examples: [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md).
 uv run --with pytest python -m pytest tests/test_project_metadata.py -v
 ```
 
-Expected: 27 passed.
+Expected: 28 passed.
 
 - [ ] **Step 8: Commit**
 
@@ -840,7 +851,7 @@ Expected: **no output**. If any line is printed, repoint it at `https://codeberg
 uv run --with pytest python -m pytest tests/test_project_metadata.py -v
 ```
 
-Expected: 34 passed.
+Expected: 35 passed.
 
 - [ ] **Step 8: Verify the server module still imports**
 
@@ -1201,7 +1212,7 @@ Expected: `mirrors in sync`.
 uv run --with pytest python -m pytest tests/test_project_metadata.py -v
 ```
 
-Expected: 34 passed.
+Expected: 35 passed.
 
 - [ ] **The live setup still works.** In FreeCAD, start the RPC server, then in a fresh Claude Code session call `get_freecad_status`. Expected: a successful response. This exercises `~/.claude.json` → proxy → `uv --directory ~/git/freecad-mcp` → server → addon symlink, the whole chain the migration deliberately left untouched.
 
