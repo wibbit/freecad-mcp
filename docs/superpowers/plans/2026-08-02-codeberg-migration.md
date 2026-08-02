@@ -855,7 +855,7 @@ Expected: **no output**. If any line is printed, repoint it at `https://codeberg
 ./check tests/test_project_metadata.py -v
 ```
 
-Expected: 33 passed.
+Expected: 34 passed.
 
 - [ ] **Step 8: Verify the server module still imports**
 
@@ -913,6 +913,8 @@ In `CHANGELOG.md`, immediately after line 6 (the "adheres to Semantic Versioning
 - **Client-neutral documentation** — docs described Claude Desktop as the only supported
   client. They now cover Claude Code (CLI) as well; Desktop instructions are retained
   unchanged for Desktop users.
+- **`CONTRIBUTING.md` testing instructions corrected** — they predated the pytest suite and
+  told contributors to run test files directly with `python`.
 
 ### ✨ Added
 
@@ -924,6 +926,11 @@ In `CHANGELOG.md`, immediately after line 6 (the "adheres to Semantic Versioning
   undocumented despite being a common Linux install route.
 - **`tests/test_project_metadata.py`** — guards branding, attribution and licensing
   invariants. Runs without FreeCAD.
+- **`./check` test wrapper** — runs `uv run --extra dev python -m pytest` and passes any
+  arguments straight through. The working invocation was previously undocumented and easy to
+  get wrong: `uv run --extra dev pytest` fails because uv does not put the console script on
+  `PATH` for extras, and `--with pytest` ignores the pytest version pinned in `pyproject.toml`.
+  Note that a bare `./check` exercises the integration suite against a running FreeCAD.
 - **Vision proxy tracked** — `freecad-mcp-proxy.py` and its TODO are now in version control.
   Integration into the package remains outstanding.
 
@@ -1216,7 +1223,7 @@ Expected: `mirrors in sync`.
 ./check tests/test_project_metadata.py -v
 ```
 
-Expected: 33 passed.
+Expected: 34 passed.
 
 - [ ] **The live setup still works.** In FreeCAD, start the RPC server, then in a fresh Claude Code session call `get_freecad_status`. Expected: a successful response. This exercises `~/.claude.json` → proxy → `uv --directory ~/git/freecad-mcp` → server → addon symlink, the whole chain the migration deliberately left untouched.
 
