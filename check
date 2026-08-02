@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#
+# Run the test suite. Any arguments are passed straight through to pytest.
+#
+#   ./check                                  # everything
+#   ./check tests/test_project_metadata.py   # one file
+#   ./check -k licence -v                    # pytest expression
+#
+# Why this wrapper exists: `uv run --extra dev pytest` fails, because uv does
+# not put the pytest console script on PATH for extras. `python -m pytest` is
+# the working form, and `--extra dev` (rather than `--with pytest`) honours the
+# pytest version pinned in pyproject.toml instead of grabbing the latest.
+#
+# CAUTION: a bare `./check` runs the integration suite too. Those tests talk to
+# a running FreeCAD over RPC and create/close scratch documents in your live
+# session. They skip themselves only when the RPC server is unreachable, so
+# with FreeCAD open they really do execute. To avoid touching a live session:
+#
+#   ./check tests/test_project_metadata.py   # metadata guards, no FreeCAD
+
+set -euo pipefail
+
+cd "$(dirname "$0")"
+exec uv run --extra dev python -m pytest "$@"

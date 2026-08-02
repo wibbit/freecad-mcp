@@ -151,13 +151,32 @@ test/add-boolean-tests
    ```
 
 2. **Run tests**
+
+   The repo root has a `./check` wrapper. Any arguments pass straight to pytest:
+
    ```bash
-   # Run specific test
-   python tests/test_your_feature.py
-   
-   # Run all tests
-   python tests/run_all_tests.py
+   ./check                                  # everything
+   ./check tests/test_your_feature.py       # one file
+   ./check -k your_feature -v               # by expression
    ```
+
+   Without bash (Windows, or if you prefer not to use the wrapper), run the
+   underlying command directly — it is exactly what `./check` invokes:
+
+   ```bash
+   uv run --extra dev python -m pytest
+   ```
+
+   Two gotchas the wrapper exists to hide: `uv run --extra dev pytest` fails
+   because uv does not put the console script on `PATH` for extras, and
+   `--with pytest` silently ignores the pytest version pinned in
+   `pyproject.toml`.
+
+   > **A bare run touches a live FreeCAD.** The integration tests create and
+   > close scratch documents over RPC in whatever FreeCAD session is running.
+   > They skip themselves only when the RPC server is unreachable. To test
+   > without touching a live session, run
+   > `./check tests/test_project_metadata.py` — those need no FreeCAD.
 
 ### Test Requirements
 

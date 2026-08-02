@@ -6,7 +6,7 @@
 
 **Architecture:** This migration changes metadata, documentation and hosting only. No module, entry point, addon directory, or tool implementation is touched, so the maintainer's live setup keeps working throughout. Branding and attribution invariants are locked in by a new pure-Python test module (`tests/test_project_metadata.py`) that requires no running FreeCAD, making each content change test-driven and permanently guarded against regression.
 
-**Tech Stack:** Python 3.12, hatchling, pytest (run via `uv run --with pytest python -m pytest`), git, Codeberg (Forgejo) REST API v1, GitHub CLI (`gh`).
+**Tech Stack:** Python 3.12, hatchling, pytest (run via `./check`), git, Codeberg (Forgejo) REST API v1, GitHub CLI (`gh`).
 
 **Spec:** `docs/superpowers/specs/2026-08-02-codeberg-migration-design.md`
 
@@ -21,7 +21,9 @@ Every task's requirements implicitly include this section.
 - **Do not delete** the `claude_desktop_config.json` paths from documentation. They are correct for Claude Desktop users. Supplement them; do not replace them.
 - **Project name stays `freecad-mcp`.** Only the host and namespace change.
 - Canonical Codeberg URL: `https://codeberg.org/wibbit/freecad-mcp`
-- Test command: `uv run --with pytest python -m pytest <args>` (the `.venv` has no `pip` and `uv run --extra dev pytest` fails to spawn; this exact form is verified working).
+- Test command: `./check [pytest args]` — a repo-root wrapper around `uv run --extra dev python -m pytest`. Do **not** use `uv run --extra dev pytest` (uv does not put the console script on PATH for extras) nor `--with pytest` (that ignores the pytest version pinned in `pyproject.toml`).
+- **A bare `./check` runs the integration suite against a live FreeCAD over RPC**, creating and closing scratch documents in the running session. Always pass `tests/test_project_metadata.py` when you only need the metadata guards.
+- **Never prefix commands with `timeout N`.** It breaks permission prefix-matching and forces a fresh approval prompt for every variant.
 - Every commit message ends with:
   ```
   Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
@@ -187,7 +189,7 @@ class TestLicence:
 - [ ] **Step 3: Run the tests**
 
 ```bash
-uv run --with pytest python -m pytest tests/test_project_metadata.py -v
+./check tests/test_project_metadata.py -v
 ```
 
 Expected: **3 passed.** All three pass immediately — see the note at the head of this task.
@@ -300,7 +302,7 @@ class TestPyproject:
 - [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
-uv run --with pytest python -m pytest tests/test_project_metadata.py::TestPyproject -v
+./check tests/test_project_metadata.py::TestPyproject -v
 ```
 
 Expected: **4 failed, 3 passed.** `test_name_unchanged`, `test_entry_point_unchanged` and
@@ -365,7 +367,7 @@ Changelog = "https://codeberg.org/wibbit/freecad-mcp/src/branch/main/CHANGELOG.m
 - [ ] **Step 4: Run the tests to verify they pass**
 
 ```bash
-uv run --with pytest python -m pytest tests/test_project_metadata.py -v
+./check tests/test_project_metadata.py -v
 ```
 
 Expected: 10 passed.
@@ -456,7 +458,7 @@ class TestReadmeAttribution:
 - [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
-uv run --with pytest python -m pytest tests/test_project_metadata.py::TestReadmeAttribution -v
+./check tests/test_project_metadata.py::TestReadmeAttribution -v
 ```
 
 Expected: **7 failed, 2 passed.** Two pass incidentally: `test_origins_links_upstream` (upstream
@@ -506,7 +508,7 @@ The original MIT licence and copyright notice are retained in full — see
 - [ ] **Step 5: Run the tests to verify they pass**
 
 ```bash
-uv run --with pytest python -m pytest tests/test_project_metadata.py -v
+./check tests/test_project_metadata.py -v
 ```
 
 Expected: 19 passed.
@@ -593,7 +595,7 @@ class TestReadmeContent:
 - [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
-uv run --with pytest python -m pytest tests/test_project_metadata.py::TestReadmeContent -v
+./check tests/test_project_metadata.py::TestReadmeContent -v
 ```
 
 Expected: **5 failed, 2 passed.** `test_retains_claude_desktop_setup` and `test_no_hard_tool_count`
@@ -681,7 +683,7 @@ Full signatures and examples: [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md).
 - [ ] **Step 7: Run the tests to verify they pass**
 
 ```bash
-uv run --with pytest python -m pytest tests/test_project_metadata.py -v
+./check tests/test_project_metadata.py -v
 ```
 
 Expected: 26 passed.
@@ -776,7 +778,7 @@ class TestClientNeutrality:
 - [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
-uv run --with pytest python -m pytest tests/test_project_metadata.py::TestClientNeutrality -v
+./check tests/test_project_metadata.py::TestClientNeutrality -v
 ```
 
 Expected: **6 failed, 1 passed.** Only `test_quickstart_retains_desktop_config_paths` passes.
@@ -850,7 +852,7 @@ Expected: **no output**. If any line is printed, repoint it at `https://codeberg
 - [ ] **Step 7: Run the full metadata suite**
 
 ```bash
-uv run --with pytest python -m pytest tests/test_project_metadata.py -v
+./check tests/test_project_metadata.py -v
 ```
 
 Expected: 33 passed.
@@ -1211,7 +1213,7 @@ Expected: `mirrors in sync`.
 - [ ] **Full metadata suite passes**
 
 ```bash
-uv run --with pytest python -m pytest tests/test_project_metadata.py -v
+./check tests/test_project_metadata.py -v
 ```
 
 Expected: 33 passed.
