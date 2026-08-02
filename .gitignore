@@ -196,3 +196,6 @@ tests/temp_*.py
 # UV lock file (optional depending on preference)
 # uv.lock
 
+
+# Subagent-driven development scratch workspace
+.superpowers/
