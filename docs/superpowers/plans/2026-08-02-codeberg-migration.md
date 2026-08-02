@@ -14,7 +14,7 @@
 
 Every task's requirements implicitly include this section.
 
-- **Never** reword, relocate or remove the line `Copyright (c) 2025 Shirokuma (k tanaka)` in `LICENSE`. It is preserved verbatim.
+- **`LICENSE` is not modified at all.** MIT requires only that the existing copyright and permission notice be retained, which the untouched file satisfies. Never reword, relocate or remove `Copyright (c) 2025 Shirokuma (k tanaka)`, and **never add** a maintainer or contributors copyright line — contributors hold copyright automatically, so such lines record nothing, and a licence file is a legal notice rather than a credits roll. Attribution belongs in the README (Task 4).
 - **No comparative claims about upstream** in any metadata or README text. Prohibited: "expanded", "more complete than", "improved over", "enhanced version of". Statements of what the project *is* are fine; statements of how it *compares* are not.
 - **No hard tool counts** in `README.md` (e.g. "79 tools"). Category descriptions only.
 - **Do not rename** the Python module `freecad_mcp`, the console script `freecad-mcp`, the addon directory `FreeCADMCP`, or the local checkout directory `~/git/freecad-mcp`.
@@ -42,7 +42,7 @@ Four things depend on the literal path `/home/dfurlong/git/freecad-mcp`:
 |---|---|---|
 | `freecad-mcp-proxy.py`, `freecad-mcp-proxy.TODO.md` | Live MCP entry point, tracked unchanged | 1 |
 | `tests/test_project_metadata.py` | **New.** Branding/attribution invariants, no FreeCAD needed | 2–6 |
-| `LICENSE` | Dual copyright | 2 |
+| `LICENSE` | Unmodified; invariants locked by tests | 2 |
 | `pyproject.toml` | Package metadata, authorship, URLs | 3 |
 | `README.md` | Attribution, Origins, canonical-home notice, contributors | 4 |
 | `README.md` | Features, client setup, install paths | 5 |
@@ -105,17 +105,40 @@ Expected: both files report `OK`, and `git status --porcelain` prints **nothing*
 
 ---
 
-### Task 2: Dual copyright in LICENSE
+### Task 2: Establish the metadata test module and licence invariants
+
+**`LICENSE` is not modified by this migration.** MIT's only obligation is that the existing
+copyright and permission notice be retained, which an untouched file already satisfies. Adding
+a maintainer line is optional and cosmetic; adding a contributors line is misleading, because
+copyright arises automatically on authorship and no notice affects who holds it. A licence file
+is a legal notice, not a credits roll. Attribution is handled properly in the README by Task 4.
+
+These tests are **regression guards, not TDD drivers** — they pass the moment the module exists,
+because they lock in a state that is already correct. That is the point: they make a future
+edit to `LICENSE` fail loudly.
 
 **Files:**
 - Create: `tests/test_project_metadata.py`
-- Modify: `LICENSE:3`
+- Restore: `LICENSE` (must end byte-identical to its pre-migration state)
 
 **Interfaces:**
 - Consumes: nothing
 - Produces: `tests/test_project_metadata.py` containing module-level constant `REPO_ROOT` (a `pathlib.Path` pointing at the repository root) and helper `read(relpath: str) -> str` returning file contents as text. Tasks 3–6 add tests to this same file and reuse both.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Restore `LICENSE` to its original, unmodified state**
+
+The file must contain exactly one copyright line, `Copyright (c) 2025 Shirokuma (k tanaka)`,
+and nothing else may differ from upstream's version.
+
+```bash
+git checkout eb4ae67 -- LICENSE
+git show eb4ae67:LICENSE | sha256sum
+sha256sum LICENSE
+```
+
+Expected: the two hashes match.
+
+- [ ] **Step 2: Write the test module**
 
 Create `tests/test_project_metadata.py`:
 
@@ -133,8 +156,6 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 UPSTREAM_COPYRIGHT = "Copyright (c) 2025 Shirokuma (k tanaka)"
-MAINTAINER_COPYRIGHT = "Copyright (c) 2026 Douglas Furlong"
-CONTRIBUTORS_COPYRIGHT = "Copyright (c) 2025-2026 freecad-mcp contributors"
 
 
 def read(relpath: str) -> str:
@@ -146,73 +167,54 @@ class TestLicence:
     def test_original_copyright_preserved_verbatim(self):
         assert UPSTREAM_COPYRIGHT in read("LICENSE")
 
-    def test_maintainer_copyright_present(self):
-        assert MAINTAINER_COPYRIGHT in read("LICENSE")
+    def test_no_copyright_lines_added(self):
+        """A licence file is a legal notice, not a credits roll.
 
-    def test_contributors_copyright_present(self):
-        """Bruno and MichaelZag retain copyright in their commits (no CLA)."""
-        assert CONTRIBUTORS_COPYRIGHT in read("LICENSE")
-
-    def test_original_copyright_precedes_maintainer(self):
-        licence = read("LICENSE")
-        assert licence.index(UPSTREAM_COPYRIGHT) < licence.index(MAINTAINER_COPYRIGHT)
+        MIT requires only that the existing notice be retained. Contributors
+        hold copyright automatically, so extra lines record nothing; attribution
+        belongs in the README instead.
+        """
+        copyright_lines = [
+            l for l in read("LICENSE").splitlines() if l.startswith("Copyright (c)")
+        ]
+        assert copyright_lines == [UPSTREAM_COPYRIGHT]
 
     def test_still_mit(self):
         assert "MIT License" in read("LICENSE")
         assert "WITHOUT WARRANTY OF ANY KIND" in read("LICENSE")
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [ ] **Step 3: Run the tests**
 
 ```bash
 uv run --with pytest python -m pytest tests/test_project_metadata.py -v
 ```
 
-Expected: **3 failed, 2 passed.** `test_original_copyright_preserved_verbatim` and `test_still_mit`
-pass (already true); `test_maintainer_copyright_present`, `test_contributors_copyright_present`
-and `test_original_copyright_precedes_maintainer` fail on the missing lines.
+Expected: **3 passed.** All three pass immediately — see the note at the head of this task.
+`test_no_copyright_lines_added` is the one that matters: it fails if anyone later appends a
+copyright line, which is exactly the mistake this task exists to prevent.
 
-- [ ] **Step 3: Add the maintainer copyright line**
-
-In `LICENSE`, change line 3 from:
-
-```
-Copyright (c) 2025 Shirokuma (k tanaka)
-```
-
-to:
-
-```
-Copyright (c) 2025 Shirokuma (k tanaka)
-Copyright (c) 2026 Douglas Furlong
-Copyright (c) 2025-2026 freecad-mcp contributors
-```
-
-Change nothing else in the file.
-
-**Why these exact years.** The maintainer's earliest commit is 2026-05-08, so 2026 alone is
-correct for that line; the fork's 2025 commits are Martin Bruno's, not the maintainer's. The
-contributors line covers Bruno (2025-11) and MichaelZag (2026-02), who retain copyright in
-their own contributions under MIT as there is no CLA.
-
-- [ ] **Step 4: Run the tests to verify they pass**
+- [ ] **Step 4: Confirm `LICENSE` is unchanged from its pre-migration state**
 
 ```bash
-uv run --with pytest python -m pytest tests/test_project_metadata.py -v
+git diff eb4ae67 -- LICENSE
 ```
 
-Expected: 5 passed.
+Expected: **no output.** Any diff here is a failure of the task.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add LICENSE tests/test_project_metadata.py
 git commit -m "$(cat <<'EOF'
-docs: add maintainer copyright alongside original author
+test: guard licence invariants; leave LICENSE unmodified
 
-MIT requires the original copyright notice be retained; it is preserved
-verbatim and a second line added for the fork's contributions
-(2025-11-05 to 2026-08-02). Adds metadata tests guarding this.
+MIT requires only that the existing copyright and permission notice be
+retained, which the untouched file already satisfies. An earlier attempt
+added maintainer and contributor copyright lines; both are reverted.
+Contributors hold copyright automatically, so such lines record nothing,
+and a licence file is a legal notice rather than a credits roll.
+Attribution is handled in the README instead.
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 EOF
@@ -366,7 +368,7 @@ Changelog = "https://codeberg.org/wibbit/freecad-mcp/src/branch/main/CHANGELOG.m
 uv run --with pytest python -m pytest tests/test_project_metadata.py -v
 ```
 
-Expected: 12 passed.
+Expected: 10 passed.
 
 - [ ] **Step 5: Verify the package still builds**
 
@@ -507,7 +509,7 @@ The original MIT licence and copyright notice are retained in full — see
 uv run --with pytest python -m pytest tests/test_project_metadata.py -v
 ```
 
-Expected: 21 passed.
+Expected: 19 passed.
 
 - [ ] **Step 6: Commit**
 
@@ -682,7 +684,7 @@ Full signatures and examples: [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md).
 uv run --with pytest python -m pytest tests/test_project_metadata.py -v
 ```
 
-Expected: 28 passed.
+Expected: 26 passed.
 
 - [ ] **Step 8: Commit**
 
@@ -851,7 +853,7 @@ Expected: **no output**. If any line is printed, repoint it at `https://codeberg
 uv run --with pytest python -m pytest tests/test_project_metadata.py -v
 ```
 
-Expected: 35 passed.
+Expected: 33 passed.
 
 - [ ] **Step 8: Verify the server module still imports**
 
@@ -1212,7 +1214,7 @@ Expected: `mirrors in sync`.
 uv run --with pytest python -m pytest tests/test_project_metadata.py -v
 ```
 
-Expected: 35 passed.
+Expected: 33 passed.
 
 - [ ] **The live setup still works.** In FreeCAD, start the RPC server, then in a fresh Claude Code session call `get_freecad_status`. Expected: a successful response. This exercises `~/.claude.json` → proxy → `uv --directory ~/git/freecad-mcp` → server → addon symlink, the whole chain the migration deliberately left untouched.
 

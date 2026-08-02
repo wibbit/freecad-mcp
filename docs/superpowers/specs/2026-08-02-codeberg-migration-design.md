@@ -38,10 +38,21 @@ MIT does **not** require open-sourcing changes, contributing upstream, seeking p
 marking modified files, or preserving the project name. Forking, renaming, restructuring
 and rehosting are all permitted.
 
-**Decision: remain MIT throughout.** A single `LICENSE` file carries two copyright lines —
-the original, preserved verbatim, and the maintainer's. Copyleft for new contributions was
-considered and rejected: it adds adoption friction and file-header complexity for no benefit
-the maintainer is seeking.
+**Decision: remain MIT, and leave `LICENSE` untouched.** The file already satisfies the only
+obligation MIT imposes, so no edit is required and none is made.
+
+Adding copyright lines was considered and rejected. A maintainer line is optional and purely
+cosmetic; a contributors line is worse than cosmetic, because it implies it does something it
+does not. Copyright arises automatically on authorship — Martin Bruno and MichaelZag hold
+copyright in their commits whether or not any file names them, so such a line records nothing.
+A `LICENSE` file is a legal notice, not a credits roll, and projects do not append contributors
+as they arrive; git history is the authorship record.
+
+Attribution belongs in the README, where §3 already places it. Duplicating it into a legal
+file would be redundant churn.
+
+Copyleft for new contributions was also considered and rejected: it adds adoption friction and
+file-header complexity for no benefit the maintainer is seeking.
 
 ## Decisions
 
@@ -75,19 +86,9 @@ all remain valid. **This migration breaks nothing in the live setup.**
 
 ### 3. Attribution
 
-- **`LICENSE`** — the original copyright line is preserved verbatim and never reworded.
-  Two lines are added beneath it:
-
-  ```
-  Copyright (c) 2026 Douglas Furlong
-  Copyright (c) 2025-2026 freecad-mcp contributors
-  ```
-
-  Years are derived per author, not from the fork's overall span. The maintainer's earliest
-  commit is 2026, so **2026 alone** is correct for that line — an earlier start year would
-  claim a period in which another contributor, not the maintainer, did the work. The
-  contributors line covers Martin Bruno and MichaelZag, who under MIT retain copyright in
-  their own contributions (there is no CLA), and spans 2025-2026 accordingly.
+- **`LICENSE`** — **not modified.** The original copyright and permission notice are retained
+  exactly as they are, which is the whole of what MIT requires. See Licence position above for
+  why no line is added.
 - **README "Origins" section** — credits Shirokuma (k tanaka) by name, links upstream, and
   states plainly that the project began as a fork and has since diverged.
 - **`pyproject.toml`** — `authors` becomes `Douglas Furlong` (currently `k-tanaka`, inherited
@@ -233,7 +234,7 @@ and does not touch the module, entry point, addon, or any tool implementation.
 
 1. `codeberg.org/wibbit/freecad-mcp` exists with `main` as default, carrying full history
    back through upstream's genuine commits.
-2. `LICENSE` retains the original copyright verbatim and adds the maintainer's.
+2. `LICENSE` is byte-identical to its pre-migration state.
 3. No file references `neka-nat` as the current home; upstream is referenced only as origin.
 4. No comparative claim about upstream appears in metadata or README.
 5. README documents the feature set and both Claude Desktop and Claude Code CLI setup.
