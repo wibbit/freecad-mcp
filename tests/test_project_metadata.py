@@ -7,15 +7,31 @@ upstream project creeps into user-facing text.
 """
 
 from pathlib import Path
+import tomllib
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 UPSTREAM_COPYRIGHT = "Copyright (c) 2025 Shirokuma (k tanaka)"
 
+CODEBERG_URL = "https://codeberg.org/wibbit/freecad-mcp"
+
+BANNED_COMPARATIVES = [
+    "expanded",
+    "more complete",
+    "improved over",
+    "enhanced version",
+    "better than",
+]
+
 
 def read(relpath: str) -> str:
     """Return the text contents of a repository-relative file."""
     return (REPO_ROOT / relpath).read_text(encoding="utf-8")
+
+
+def load_pyproject() -> dict:
+    """Return the parsed pyproject.toml as a dict."""
+    return tomllib.loads(read("pyproject.toml"))
 
 
 class TestLicence:
@@ -37,3 +53,42 @@ class TestLicence:
     def test_still_mit(self):
         assert "MIT License" in read("LICENSE")
         assert "WITHOUT WARRANTY OF ANY KIND" in read("LICENSE")
+
+
+class TestPyproject:
+    def test_name_unchanged(self):
+        assert load_pyproject()["project"]["name"] == "freecad-mcp"
+
+    def test_authors_is_maintainer(self):
+        authors = load_pyproject()["project"]["authors"]
+        names = [a.get("name") for a in authors]
+        assert names == ["Douglas Furlong"]
+
+    def test_description_credits_upstream(self):
+        description = load_pyproject()["project"]["description"]
+        assert "neka-nat/freecad-mcp" in description
+
+    def test_description_is_not_desktop_specific(self):
+        assert "Claude Desktop" not in load_pyproject()["project"]["description"]
+
+    def test_description_makes_no_comparative_claim(self):
+        description = load_pyproject()["project"]["description"].lower()
+        for phrase in BANNED_COMPARATIVES:
+            assert phrase not in description, f"comparative claim: {phrase!r}"
+
+    def test_all_urls_point_at_codeberg(self):
+        urls = load_pyproject()["project"]["urls"]
+        assert set(urls) == {
+            "Homepage",
+            "Documentation",
+            "Repository",
+            "Issues",
+            "Changelog",
+        }
+        for label, url in urls.items():
+            assert url.startswith(CODEBERG_URL), f"{label} still points at {url}"
+
+    def test_entry_point_unchanged(self):
+        assert load_pyproject()["project"]["scripts"]["freecad-mcp"] == (
+            "freecad_mcp.server:main"
+        )
