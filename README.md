@@ -1,8 +1,10 @@
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/neka-nat-freecad-mcp-badge.png)](https://mseep.ai/app/neka-nat-freecad-mcp)
-
 # FreeCAD MCP
 
-This repository is a FreeCAD MCP that allows you to control FreeCAD from Claude Desktop.
+Drive FreeCAD from any MCP client — parametric modelling, sketching, assemblies,
+FEM analysis and technical drawings, exposed as MCP tools.
+
+> **Canonical home:** [codeberg.org/wibbit/freecad-mcp](https://codeberg.org/wibbit/freecad-mcp)
+> The GitHub repository is a read-only mirror. Please file issues and pull requests on Codeberg.
 
 ## Demo
 
@@ -190,8 +192,20 @@ The `--host` value is validated on startup — it must be a valid IPv4/IPv6 addr
 
 ## Contributors
 
-<a href="https://github.com/neka-nat/freecad-mcp/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=neka-nat/freecad-mcp" />
-</a>
+- **Shirokuma (k tanaka)** — author of the upstream project this is based on
+- **Douglas Furlong** — maintainer
+- **Martin Bruno** — advanced modelling, sketch workflow, assembly and boolean tooling
+- **MichaelZag** — GUI defaults and startup quality-of-life improvements
 
-Made with [contrib.rocks](https://contrib.rocks).
+## Origins
+
+This project began as a fork of
+[`neka-nat/freecad-mcp`](https://github.com/neka-nat/freecad-mcp) by
+**Shirokuma (k tanaka)**, whose work is the foundation everything here is built on.
+
+It has since diverged and is developed and maintained independently, with its own
+tool surface, documentation and release history. It is not affiliated with, nor
+endorsed by, the upstream project.
+
+The original MIT licence and copyright notice are retained in full — see
+[`LICENSE`](LICENSE).

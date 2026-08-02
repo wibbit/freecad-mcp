@@ -92,3 +92,38 @@ class TestPyproject:
         assert load_pyproject()["project"]["scripts"]["freecad-mcp"] == (
             "freecad_mcp.server:main"
         )
+
+
+class TestReadmeAttribution:
+    def test_no_upstream_security_badge(self):
+        """The MseeP badge assesses upstream's repo, not this one."""
+        assert "mseep" not in read("README.md").lower()
+
+    def test_no_upstream_contributor_image(self):
+        """contrib.rocks renders upstream's contributor list."""
+        assert "contrib.rocks" not in read("README.md")
+
+    def test_has_origins_section(self):
+        assert "## Origins" in read("README.md")
+
+    def test_origins_credits_original_author_by_name(self):
+        assert "Shirokuma (k tanaka)" in read("README.md")
+
+    def test_origins_links_upstream(self):
+        assert "https://github.com/neka-nat/freecad-mcp" in read("README.md")
+
+    def test_states_canonical_home(self):
+        assert CODEBERG_URL in read("README.md")
+
+    def test_credits_fork_contributors(self):
+        readme = read("README.md")
+        assert "Martin Bruno" in readme
+        assert "MichaelZag" in readme
+
+    def test_makes_no_comparative_claim(self):
+        readme = read("README.md").lower()
+        for phrase in BANNED_COMPARATIVES:
+            assert phrase not in readme, f"comparative claim: {phrase!r}"
+
+    def test_states_no_affiliation(self):
+        assert "not affiliated" in read("README.md").lower()
