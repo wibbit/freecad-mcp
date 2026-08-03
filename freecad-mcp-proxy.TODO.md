@@ -43,7 +43,8 @@ OpenCode ones if relevant.
 - Logs to `/tmp/freecad-mcp-proxy.log`.
 - This file and `freecad-mcp-proxy.py` are **tracked** in git — they were committed
   during the Codeberg migration. Do the rework on a working branch.
-- The script as committed is maintainer-specific: `freecad-mcp-proxy.py` hardcodes the
-  absolute path `/home/dfurlong/git/freecad-mcp` (in `UPSTREAM_CMD` and in the usage
-  docstring), so it cannot run for anyone else — genericising those paths is a
-  prerequisite of the integration work in step 1 above.
+- The script as committed is maintainer-specific and cannot run for anyone else.
+  `UPSTREAM_CMD` hardcodes `/home/dfurlong/git/freecad-mcp`, and the usage docstring
+  hardcodes `/home/dfurlong/git/freecad-mcp-proxy.py` — a path that is also **stale**,
+  since the file now lives inside the repository. Genericising both is a prerequisite
+  of the integration work in step 1 above.

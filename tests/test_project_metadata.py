@@ -202,7 +202,13 @@ class TestReadmeContent:
 
 class TestDocsHygiene:
     def test_no_hard_tool_count(self):
-        """Counts go stale on every tool added, in any doc, not just the README."""
+        """Counts go stale on every tool added, in any doc, not just the README.
+
+        Uses `current_text`, so counts inside released CHANGELOG sections are
+        exempt — those are an accurate historical record. Known consequence: when
+        `[Unreleased]` is renamed to a version at release time, any count in it
+        silently leaves this guard's coverage. Check counts before releasing.
+        """
         for path in DOC_FILES:
             match = re.search(r"\b\d{2,}\s+tools\b", current_text(path))
             assert not match, f"{path}: hard tool count {match.group(0)!r}"

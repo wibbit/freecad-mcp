@@ -41,9 +41,10 @@ By participating in this project, you are expected to:
 4. **Install FreeCAD addon**
 
    Copy `addon/FreeCADMCP` into your FreeCAD Mod directory. Which one that is
-   depends on your platform and how FreeCAD was installed — note that the macOS
-   and Arch paths are version-numbered, and an unversioned path is not scanned by
-   FreeCAD 1.1:
+   depends on your platform and how FreeCAD was installed. On macOS and Arch the
+   path is version-numbered, and FreeCAD 1.1 does not scan the unversioned form
+   there — the addon will silently never appear. The Ubuntu/Debian paths below
+   are unversioned by design and are scanned normally:
 
    ```bash
    # Windows:  %APPDATA%\FreeCAD\Mod\
