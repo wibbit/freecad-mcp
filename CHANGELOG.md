@@ -43,6 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that a bare `./check` exercises the integration suite against a running FreeCAD.
 - **Vision proxy tracked** — `freecad-mcp-proxy.py` and its TODO are now in version control.
   Integration into the package remains outstanding.
+- **`CONTRIBUTING.md` troubleshooting section** — covers `uv run --extra dev pytest` failing to
+  spawn when the console script is missing from `.venv/bin/`, including the detail that
+  `uv sync` reports "no changes" because it verifies packages rather than their scripts, and
+  that `--reinstall-package pytest` is the repair.
 - **Repository published on Codeberg** — the project is now live at
   [codeberg.org/wibbit/freecad-mcp](https://codeberg.org/wibbit/freecad-mcp), with its full
   commit history.

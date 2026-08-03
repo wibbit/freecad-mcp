@@ -216,6 +216,37 @@ test/add-boolean-tests
 - Tests should be **independent** (no dependencies between tests)
 - Tests should **handle errors gracefully**
 
+### Troubleshooting
+
+**`uv run --extra dev pytest` fails to spawn**
+
+```
+error: Failed to spawn: `pytest`
+  Caused by: No such file or directory (os error 2)
+```
+
+The `pytest` package is installed but its console script is missing from
+`.venv/bin/`. This is an environment fault, not a project one — the other dev
+tools (`black`, `mypy`, `pylint`) usually still work, which makes it look like
+uv is at fault for extras. It is not.
+
+The trap is that the obvious repair reports success and changes nothing:
+
+```bash
+uv sync --extra dev        # "Would make no changes" — it verifies installed
+                           # packages, not their console scripts
+```
+
+Force the reinstall instead:
+
+```bash
+uv sync --extra dev --reinstall-package pytest
+```
+
+Note that `./check` keeps working throughout, because `python -m pytest` runs
+the module directly and never needs the console script. So this failure only
+shows up if you invoke `pytest` by name.
+
 ## 📚 Documentation
 
 ### Required Documentation
