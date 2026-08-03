@@ -439,7 +439,6 @@ Any other context or screenshots.
 
 ## 📞 Getting Help
 
-- **Issues**: For bug reports and feature requests
 - **Issues**: For questions, bug reports and feature requests
 - **FreeCAD Forum**: For FreeCAD-specific questions
 
