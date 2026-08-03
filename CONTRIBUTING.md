@@ -35,8 +35,16 @@ By participating in this project, you are expected to:
 
 3. **Install dependencies**
    ```bash
-   pip install -e .
+   uv sync --extra dev
    ```
+
+   This creates `.venv/` with the project and its development dependencies —
+   pytest, pylint, black and mypy. The `--extra dev` part matters: without it the
+   test and lint commands further down this page have nothing to run.
+
+   If you would rather not use [uv](https://docs.astral.sh/uv/), the pip
+   equivalent is `pip install -e ".[dev]"` — note the `[dev]`, for the same
+   reason.
 
 4. **Install FreeCAD addon**
 
