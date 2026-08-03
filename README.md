@@ -4,7 +4,8 @@ Drive FreeCAD from any MCP client — parametric modelling, sketching, assemblie
 FEM analysis and technical drawings, exposed as MCP tools.
 
 > **Canonical home:** [codeberg.org/wibbit/freecad-mcp](https://codeberg.org/wibbit/freecad-mcp)
-> Please file issues and pull requests there.
+> Please file issues and pull requests there. The GitHub repository is a push mirror
+> with issues disabled — its code is kept in sync, but it is not where development happens.
 
 ## Demo
 

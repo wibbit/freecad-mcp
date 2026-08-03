@@ -10,9 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🔄 Changed
 
 - **Repointed at Codeberg** — package URLs, clone commands and issue links now reference
-  [codeberg.org/wibbit/freecad-mcp](https://codeberg.org/wibbit/freecad-mcp), which becomes the
-  project's canonical home. Publishing the repository there, and the disposition of the
-  existing GitHub repository, are recorded separately when they happen.
+  [codeberg.org/wibbit/freecad-mcp](https://codeberg.org/wibbit/freecad-mcp), which is now the
+  project's canonical home.
+- **GitHub converted to a push mirror** — `github.com/wibbit/freecad-mcp` now carries the same
+  `main`, with issues and the wiki disabled and its description and homepage pointing at
+  Codeberg. Its previous branch history was a rewritten duplicate of the upstream project
+  (byte-identical tree, no unique content) and was replaced.
 - **Authorship corrected** — `pyproject.toml` named the upstream author and pointed all five
   project URLs at upstream's repository. Now names the maintainer and this project's URLs.
 - **Client-neutral documentation** — docs described Claude Desktop as the only supported
