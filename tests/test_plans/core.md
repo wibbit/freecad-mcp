@@ -130,7 +130,7 @@ Last updated: 2026-05-10
 ## 3. Code Execution
 
 ### 3.1 `execute_code`
-- **Signature**: `execute_code(code: str)`
+- **Signature**: `execute_code(code: str, vision_prompt: str | None = None)`
 - **Test matrix**:
 
 | Scenario | Test | Status |
@@ -178,11 +178,19 @@ or check `Shape.isValid()` for validation.
 - **Known**: ✅ Working
 
 ### 4.4 `get_view`
-- **Signature**: `get_view(view_name, width, height, focus_object)`
+- **Signature**: `get_view(view_name, width, height, focus_object, vision_prompt: str | None = None)`
 - **Returns**: Screenshot (ImageContent)
 - **Known**: ✅ Working (returns empty in non-GUI context or model that can't render)
 - **Test all views**: Isometric, Front, Top, Right, Back, Left, Bottom, Dimetric, Trimetric
 - **Edge cases**: focus_object that doesn't exist (should fit all)
+
+### 4.4a `--vision-summary` (server flag, affects `execute_code` and `get_view`)
+- **Setup**: Start the MCP server with `--vision-summary` (optionally `--vision-model`, `--vision-url`). Ollama must be running and reachable with the configured model pulled.
+- **Test**: Call `get_view("Isometric")` — response should contain a text description of the viewport instead of an `ImageContent` screenshot.
+- **Test**: Call `get_view("Isometric", vision_prompt="Is the top face flush with the base?")` — the description should visibly address the custom prompt rather than the generic default.
+- **Test**: Call `execute_code(code, vision_prompt="...")` similarly — the trailing screenshot is replaced by a steered text description.
+- **Known**: ✅ Working
+- **Edge case — Ollama unreachable**: Stop Ollama (or point `--vision-url` at a dead endpoint), then call `get_view("Isometric")`. Response must contain the bracketed message `[FreeCAD viewport — vision model unavailable (...); image suppressed. Check Ollama at ...]` as text — not an image, and not a tool error. The screenshot must never be sent as a fallback.
 
 ### 4.5 `get_freecad_errors`
 - **Signature**: `get_freecad_errors(max_lines: int = 200)`

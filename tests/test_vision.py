@@ -1,7 +1,5 @@
 """Unit tests for vision summarisation. Needs neither FreeCAD nor Ollama."""
 
-import pytest
-
 from freecad_mcp import vision
 
 
@@ -255,7 +253,9 @@ class TestGetViewOperation:
         from freecad_mcp.operations.core import get_view_operation
 
         out = get_view_operation(self._FakeConn(), "Isometric", None, None, None, True)
-        assert all(getattr(item, "type", None) != "image" for item in out)
+        assert len(out) == 1
+        assert out[0].type == "text"
+        assert "only-text-feedback" in out[0].text.lower() or "only_text_feedback" in out[0].text.lower()
 
     def test_vision_summary_replaces_the_image(self, monkeypatch):
         from freecad_mcp.operations.core import get_view_operation

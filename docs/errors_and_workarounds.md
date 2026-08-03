@@ -244,6 +244,24 @@ Pass `cone.Name` as the tool in `boolean_cut`. The boolean-based approach is mor
 
 ---
 
+## `get_view` returned a screenshot despite `--only-text-feedback`
+
+**Tool**: `get_view`  
+**Cause**: `get_view_operation` constructed its `ImageContent` directly instead of going through the shared screenshot helper, so it never received the `only_text_feedback` flag.  
+**Fix**: `get_view_operation` now routes through `responses.add_screenshot_if_available`, so `--only-text-feedback` is honoured the same way it is for every other tool.  
+**Log to check**: N/A — this was a response-construction bug, not a runtime error; verify by confirming `get_view` returns a text item (no `image` content) when the server is started with `--only-text-feedback`.
+
+---
+
+## `[FreeCAD viewport — vision model unavailable (...); image suppressed. Check Ollama at ...]`
+
+**Tools**: `execute_code`, `get_view` (any tool routed through `add_screenshot_if_available` when `--vision-summary` is on)  
+**Cause**: `--vision-summary` is enabled but the configured Ollama endpoint could not be reached (not running, wrong `--vision-url`, or the model named by `--vision-model` is not pulled).  
+**Fix**: Confirm Ollama is running and reachable at the configured URL, and that the model is pulled (`ollama pull llava:7b`). The screenshot is deliberately **not** sent as a fallback when the vision call fails — falling back to the image would silently undo the token saving `--vision-summary` was enabled for. The bracketed message is returned as text instead so the failure is visible in-band.  
+**Log to check**: `curl http://localhost:11434/api/tags` to check Ollama reachability directly; the FreeCAD MCP server log also records `Vision summarisation failed: ...` at the time of the call.
+
+---
+
 ## Accessing FreeCAD Errors Without Copy-Paste
 
 Use the `get_freecad_errors` MCP tool to read the Report View panel directly. It returns filtered error and warning lines without requiring you to switch to FreeCAD and copy-paste.

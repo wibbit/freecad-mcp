@@ -157,12 +157,11 @@ def add_screenshot_if_available(
     module do not each need to know about server state.
     """
     if not screenshot and not state.only_text_feedback:
-        response.append(TextContent(
+        return [*response, TextContent(
             type="text",
             text="Note: Visual preview unavailable in this view type (e.g. TechDraw or Spreadsheet). Switch to a 3D view for screenshots.",
-        ))
-        return response
-    return list(_add_screenshot(
+        )]
+    return _add_screenshot(
         response,
         screenshot,
         state.only_text_feedback,
@@ -170,7 +169,7 @@ def add_screenshot_if_available(
         vision_model=state.vision_model,
         vision_url=state.vision_url,
         vision_prompt=vision_prompt,
-    ))
+    )
 
 
 @asynccontextmanager

@@ -125,6 +125,8 @@ def get_view_operation(
     screenshot = freecad.get_active_screenshot(view_name, width, height, focus_object)
     if screenshot is None:
         return text_response("Cannot get screenshot in the current view type (such as TechDraw or Spreadsheet)")
+    if only_text_feedback:
+        return text_response("Screenshot suppressed by --only-text-feedback.")
     return add_screenshot_if_available(
         [],
         screenshot,
