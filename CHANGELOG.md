@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unchanged for Desktop users.
 - **`CONTRIBUTING.md` testing instructions corrected** — they predated the pytest suite and
   told contributors to run test files directly with `python`.
+- **Merged integration branches removed** — `pr-25`, `pr-38`, `pr-39` and `integrated` were
+  local-only refs, never published. Their work has been in `main` since 2026-05-08 and the
+  merge commits that brought it in remain in history, so nothing was lost.
 
 ### ✨ Added
 
@@ -55,6 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`mcp` dependency capped below 2.0** — `mcp[cli]>=1.12.2` had no upper bound, so a fresh
   install resolved to `mcp` 2.0.0, which no longer provides `mcp.server.fastmcp` and made the
   server fail at import with `ModuleNotFoundError`. Now `mcp[cli]>=1.12.2,<2.0.0`.
+- **Development setup omitted the dev dependencies** — `CONTRIBUTING.md` told contributors to
+  run `pip install -e .`, which skips the `dev` extra. Anyone following the setup steps in
+  order therefore had no pytest, pylint, black or mypy when they reached the test and lint
+  commands given later on the same page. Now `uv sync --extra dev`, with the pip equivalent
+  `pip install -e ".[dev]"` noted for those who prefer it.
 
 ---
 
