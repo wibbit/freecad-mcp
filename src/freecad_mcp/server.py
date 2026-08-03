@@ -605,11 +605,13 @@ else:
 
 @mcp.tool()
 @_log_tool
-def execute_code(ctx: Context, code: str) -> list[TextContent | ImageContent]:
+def execute_code(ctx: Context, code: str, vision_prompt: str | None = None) -> list[TextContent | ImageContent]:
     """Execute arbitrary Python code in FreeCAD.
 
     Args:
         code: The Python code to execute.
+        vision_prompt: Optional question to ask the vision model about the resulting
+            screenshot. Only used when the server runs with --vision-summary.
 
     Returns:
         A message indicating the success or failure of the code execution, the output of the code execution, and a screenshot of the object.
@@ -620,7 +622,7 @@ def execute_code(ctx: Context, code: str) -> list[TextContent | ImageContent]:
         if res["success"]:
             screenshot = freecad.get_active_screenshot()
             response = [TextContent(type="text", text=f"Code executed successfully.\nOutput: {res['data']['output']}")]
-            return add_screenshot_if_available(response, screenshot)
+            return add_screenshot_if_available(response, screenshot, vision_prompt)
         else:
             raise Exception(f"Failed to execute code: {res['error']}")
     except Exception as e:
@@ -636,6 +638,7 @@ def get_view(
     width: int | None = None,
     height: int | None = None,
     focus_object: str | None = None,
+    vision_prompt: str | None = None,
 ) -> list[ImageContent | TextContent]:
     """Get a screenshot of the active view.
 
@@ -654,11 +657,24 @@ def get_view(
         width: The width of the screenshot in pixels. If not specified, uses the viewport width.
         height: The height of the screenshot in pixels. If not specified, uses the viewport height.
         focus_object: The name of the object to focus on. If not specified, fits all objects in the view.
+        vision_prompt: Optional question to ask the vision model about the resulting
+            screenshot. Only used when the server runs with --vision-summary.
 
     Returns:
         A screenshot of the active view.
     """
-    return get_view_operation(get_freecad_connection(), view_name, width, height, focus_object)
+    return get_view_operation(
+        get_freecad_connection(),
+        view_name,
+        width,
+        height,
+        focus_object,
+        state.only_text_feedback,
+        vision_summary=state.vision_summary,
+        vision_model=state.vision_model,
+        vision_url=state.vision_url,
+        vision_prompt=vision_prompt,
+    )
 
 
 @mcp.tool()

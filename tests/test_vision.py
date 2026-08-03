@@ -229,3 +229,74 @@ class TestFlagParsing:
         args = _build_arg_parser().parse_args(["--only-text-feedback", "--host", "1.2.3.4"])
         assert args.only_text_feedback is True
         assert args.host == "1.2.3.4"
+
+
+class TestGetViewOperation:
+    """get_view previously built ImageContent directly, ignoring only_text_feedback."""
+
+    class _FakeConn:
+        def __init__(self, screenshot="B64DATA"):
+            self._screenshot = screenshot
+            self.focus_object_seen = "unset"
+
+        def get_active_screenshot(self, view_name=None, width=None, height=None, focus_object=None):
+            self.focus_object_seen = focus_object
+            return self._screenshot
+
+    def test_returns_image_by_default(self):
+        from freecad_mcp.operations.core import get_view_operation
+
+        out = get_view_operation(self._FakeConn(), "Isometric", None, None, None, False)
+        assert len(out) == 1
+        assert out[0].type == "image"
+
+    def test_honours_only_text_feedback(self):
+        """The bug: this previously returned an image regardless."""
+        from freecad_mcp.operations.core import get_view_operation
+
+        out = get_view_operation(self._FakeConn(), "Isometric", None, None, None, True)
+        assert all(getattr(item, "type", None) != "image" for item in out)
+
+    def test_vision_summary_replaces_the_image(self, monkeypatch):
+        from freecad_mcp.operations.core import get_view_operation
+
+        monkeypatch.setattr(
+            responses.vision, "summarise",
+            lambda image_b64, prompt, *, url, model, timeout=60: "DESCRIPTION",
+        )
+        out = get_view_operation(
+            self._FakeConn(), "Isometric", None, None, None, False, vision_summary=True
+        )
+        assert len(out) == 1
+        assert out[0].type == "text"
+        assert out[0].text == "DESCRIPTION"
+
+    def test_focus_object_is_passed_through_verbatim(self):
+        """No pipe-splitting anywhere: the object name reaches FreeCAD intact."""
+        from freecad_mcp.operations.core import get_view_operation
+
+        conn = self._FakeConn()
+        get_view_operation(conn, "Isometric", None, None, "Sleeve|weird", False)
+        assert conn.focus_object_seen == "Sleeve|weird"
+
+    def test_no_screenshot_returns_explanatory_text(self):
+        from freecad_mcp.operations.core import get_view_operation
+
+        out = get_view_operation(self._FakeConn(screenshot=None), "Isometric", None, None, None, False)
+        assert len(out) == 1
+        assert out[0].type == "text"
+        assert "Cannot get screenshot" in out[0].text
+
+
+class TestToolSignatures:
+    def test_execute_code_accepts_vision_prompt(self):
+        import inspect
+        from freecad_mcp.server import execute_code
+
+        assert "vision_prompt" in inspect.signature(execute_code).parameters
+
+    def test_get_view_accepts_vision_prompt(self):
+        import inspect
+        from freecad_mcp.server import get_view
+
+        assert "vision_prompt" in inspect.signature(get_view).parameters

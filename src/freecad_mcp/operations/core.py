@@ -1,8 +1,7 @@
 import logging
 from typing import Any
 
-from mcp.types import ImageContent
-
+from .. import vision
 from ..freecad_client import FreeCADConnection
 from ..responses import ToolResponse, add_screenshot_if_available, json_response, text_response
 
@@ -116,11 +115,25 @@ def get_view_operation(
     width: int | None = None,
     height: int | None = None,
     focus_object: str | None = None,
+    only_text_feedback: bool = False,
+    *,
+    vision_summary: bool = False,
+    vision_model: str = vision.DEFAULT_OLLAMA_MODEL,
+    vision_url: str = vision.DEFAULT_OLLAMA_URL,
+    vision_prompt: str | None = None,
 ) -> ToolResponse:
     screenshot = freecad.get_active_screenshot(view_name, width, height, focus_object)
-    if screenshot is not None:
-        return [ImageContent(type="image", data=screenshot, mimeType="image/png")]
-    return text_response("Cannot get screenshot in the current view type (such as TechDraw or Spreadsheet)")
+    if screenshot is None:
+        return text_response("Cannot get screenshot in the current view type (such as TechDraw or Spreadsheet)")
+    return add_screenshot_if_available(
+        [],
+        screenshot,
+        only_text_feedback,
+        vision_summary=vision_summary,
+        vision_model=vision_model,
+        vision_url=vision_url,
+        vision_prompt=vision_prompt,
+    )
 
 
 def insert_part_from_library_operation(
