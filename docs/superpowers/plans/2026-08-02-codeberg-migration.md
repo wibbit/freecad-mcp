@@ -1088,7 +1088,8 @@ Expected: exactly one head, `refs/heads/main`; `default: main | private: False`.
 git show codeberg/main:LICENSE | head -5
 ```
 
-Expected: both copyright lines present, original first.
+Expected: exactly one `Copyright (c)` line — `Copyright (c) 2025 Shirokuma (k tanaka)` — proving
+the original author's notice survived the push and that no copyright line was ever added.
 
 ---
 
