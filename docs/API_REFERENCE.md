@@ -166,6 +166,7 @@ Execute arbitrary Python code in FreeCAD.
 
 **Parameters:**
 - `code` (str): Python code to execute
+- `vision_prompt` (str, optional): Question to ask the vision model about the resulting screenshot. Only used when the server runs with `--vision-summary`; ignored otherwise.
 
 **Example:**
 ```json
@@ -733,6 +734,7 @@ Get screenshot from specific view.
 
 **Parameters:**
 - `view_name` (str): "Isometric", "Front", "Top", "Right", "Back", "Left", "Bottom", "Dimetric", "Trimetric"
+- `vision_prompt` (str, optional): Question to ask the vision model about the resulting screenshot. Only used when the server runs with `--vision-summary`; ignored otherwise.
 
 **Example:**
 ```json
