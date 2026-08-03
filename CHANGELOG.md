@@ -5,6 +5,47 @@ All notable changes to FreeCAD MCP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-08-02
+
+### 🔄 Changed
+
+- **Project moved to Codeberg** — the canonical repository is now
+  [codeberg.org/wibbit/freecad-mcp](https://codeberg.org/wibbit/freecad-mcp). The GitHub
+  repository continues as a read-only push mirror with issues disabled. All package URLs,
+  clone commands and issue links updated.
+- **Authorship corrected** — `pyproject.toml` named the upstream author and pointed all five
+  project URLs at upstream's repository. Now names the maintainer and this project's URLs.
+- **Client-neutral documentation** — docs described Claude Desktop as the only supported
+  client. They now cover Claude Code (CLI) as well; Desktop instructions are retained
+  unchanged for Desktop users.
+- **`CONTRIBUTING.md` testing instructions corrected** — they predated the pytest suite and
+  told contributors to run test files directly with `python`.
+
+### ✨ Added
+
+- **README feature overview** — capability groups covering documents, sketching, solid
+  modelling, booleans, assembly, FEM, TechDraw, import/export, inspection and spreadsheets.
+- **README "Origins" section** — credits Shirokuma (k tanaka), links the upstream project,
+  and states that this project is independently maintained and unaffiliated.
+- **Flatpak addon path** — `~/.var/app/org.freecad.FreeCAD/data/FreeCAD/v1-1/Mod/`, previously
+  undocumented despite being a common Linux install route.
+- **`tests/test_project_metadata.py`** — guards branding, attribution and licensing
+  invariants. Runs without FreeCAD.
+- **`./check` test wrapper** — runs `uv run --extra dev python -m pytest` and passes any
+  arguments straight through. The working invocation was previously undocumented and easy to
+  get wrong: `uv run --extra dev pytest` fails because uv does not put the console script on
+  `PATH` for extras, and `--with pytest` ignores the pytest version pinned in `pyproject.toml`.
+  Note that a bare `./check` exercises the integration suite against a running FreeCAD.
+- **Vision proxy tracked** — `freecad-mcp-proxy.py` and its TODO are now in version control.
+  Integration into the package remains outstanding.
+
+### 🐛 Fixed
+
+- **Misleading badges removed** — the MseeP security-assessment badge and the `contrib.rocks`
+  contributor image both described upstream's repository, not this one.
+
+---
+
 ## [Unreleased] - 2026-05-12
 
 ### 🐛 Fixed
