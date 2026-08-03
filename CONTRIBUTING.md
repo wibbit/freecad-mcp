@@ -316,13 +316,14 @@ Additional notes or warnings.
 
 1. **Ensure tests pass**
    ```bash
-   python tests/run_all_tests.py
+   ./check
    ```
+   See [Testing](#-testing) above — a bare run exercises the integration suite
+   against a running FreeCAD, which is what you want before submitting.
 
 2. **Check code style**
    ```bash
-   # Use linter if available
-   pylint src/freecad_mcp/
+   uv run --extra dev pylint src/freecad_mcp/
    ```
 
 3. **Commit your changes**
