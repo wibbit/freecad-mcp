@@ -904,10 +904,10 @@ In `CHANGELOG.md`, immediately after line 6 (the "adheres to Semantic Versioning
 
 ### 🔄 Changed
 
-- **Project moved to Codeberg** — the canonical repository is now
-  [codeberg.org/wibbit/freecad-mcp](https://codeberg.org/wibbit/freecad-mcp). The GitHub
-  repository continues as a read-only push mirror with issues disabled. All package URLs,
-  clone commands and issue links updated.
+- **Repointed at Codeberg** — package URLs, clone commands and issue links now reference
+  [codeberg.org/wibbit/freecad-mcp](https://codeberg.org/wibbit/freecad-mcp), which becomes the
+  project's canonical home. Publishing the repository there, and the disposition of the
+  existing GitHub repository, are recorded separately when they happen.
 - **Authorship corrected** — `pyproject.toml` named the upstream author and pointed all five
   project URLs at upstream's repository. Now names the maintainer and this project's URLs.
 - **Client-neutral documentation** — docs described Claude Desktop as the only supported
@@ -949,7 +949,7 @@ In `CHANGELOG.md`, immediately after line 6 (the "adheres to Semantic Versioning
 head -45 CHANGELOG.md && grep -c "^## \[Unreleased\]" CHANGELOG.md
 ```
 
-Expected: the new entry appears first, the previous `[Unreleased] - 2026-05-12` entry is intact below it, and the count is `3`.
+Expected: the new entry appears first, the three previous `[Unreleased]` entries (2026-05-12, 2026-05-11, 2026-05-10) are intact below it, and the count is `4`.
 
 - [ ] **Step 3: Commit**
 
