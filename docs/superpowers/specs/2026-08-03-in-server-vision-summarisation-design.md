@@ -35,6 +35,25 @@ So the server receives `focus_object="SleeveDrainHoles|Is there a gap…"` as an
 cannot find it. The `execute_code` form is harmless — a `# __vision__:` comment is valid Python —
 but the `get_view` form is broken. This design removes the bug structurally rather than patching it.
 
+## The `get_view` / `--only-text-feedback` bug
+
+`get_view_operation` (`operations/core.py:113-123`) does not accept `only_text_feedback` and never
+consults it:
+
+```python
+screenshot = freecad.get_active_screenshot(view_name, width, height, focus_object)
+if screenshot is not None:
+    return [ImageContent(type="image", data=screenshot, mimeType="image/png")]
+```
+
+Every other operation in that file takes the flag and honours it. So `get_view` returns a full
+base64 screenshot even when the user has explicitly asked for text-only output — defeating the
+flag for the one tool whose entire purpose is returning an image.
+
+This is pre-existing and unrelated to vision summarisation, but it sits on exactly the code path
+this work modifies, and leaving it would mean `get_view` also silently bypassed the new
+`--vision-summary` flag. It is fixed here.
+
 ## Decisions
 
 ### 1. Summarise in the server, not in a proxy
@@ -42,11 +61,22 @@ but the `get_view` form is broken. This design removes the bug structurally rath
 The proxy's own TODO recommended keeping it a separate process ("option (a)"), reasoning that
 folding it into the server would be the bigger change. Reading the code shows the opposite.
 
-The server has a **single choke point**: `add_screenshot_if_available` is a 9-line function called
-from 61 places, and every screenshot in the server passes through one `response.append(ImageContent(...))`
-line. Summarising there means changing that line; only two call sites (`execute_code` and
-`get_view`, which gain a prompt parameter) change at all, and the other 59 need nothing. The
-adjacent `state.only_text_feedback` check already proves the pattern.
+The server has **three** places where a screenshot enters a response, and only three:
+
+| Location | Callers | Honours `only_text_feedback` |
+|---|---|---|
+| `server.py:150` — `add_screenshot_if_available(response, screenshot)`, reads module state | ~60 | yes |
+| `responses.py:43` — `add_screenshot_if_available(response, screenshot, only_text_feedback)` | 8, in `operations/core.py` | yes |
+| `operations/core.py:122` — `get_view_operation` constructs `ImageContent` directly | 1 | **no — see below** |
+
+So summarisation needs three edits, not sixty-eight. The ~68 tool call sites need nothing beyond
+the two that gain a prompt parameter. The adjacent `state.only_text_feedback` check in the first
+two already proves the pattern this feature follows.
+
+The two helpers share a name and duplicate their logic with different signatures. This design
+makes `responses.py`'s version the single implementation — it takes its inputs explicitly, so it
+is testable without module state — and reduces `server.py`'s to a thin wrapper that supplies
+`state`. That creates the single choke point the codebase currently only appears to have.
 
 Most of the proxy's 245 lines exist *only because it is a separate process*:
 
@@ -67,8 +97,10 @@ argument, but for a general-purpose tool rather than for this repository. It als
 `focus_object` bug to be fixed separately.
 
 **Accepted risk:** this edits a working 79-tool server, where a bad change breaks CAD work rather
-than only vision. Mitigated by the change being confined to one function plus one new module, and
-by the new module being unit-testable without FreeCAD.
+than only vision. Mitigated by the change being confined to three functions plus one new module,
+by both the new module and the consolidated helper taking their inputs explicitly so they are
+unit-testable without FreeCAD, and by the default (`--vision-summary` absent) leaving behaviour
+byte-for-byte unchanged.
 
 ### 2. Configuration: three CLI flags
 
@@ -135,11 +167,23 @@ FreeCAD.
 Injectable for testing: the HTTP call goes through a module-level seam a test can replace, so no
 network is needed.
 
+### `responses.py` (modified) — the single choke point
+
+`add_screenshot_if_available` becomes the one implementation, gaining the vision settings and an
+optional prompt. It takes everything explicitly, so it is unit-testable with no module state.
+
 ### `server.py` (modified)
 
 - `main()` — three new argparse flags stored on `state`.
-- `add_screenshot_if_available(response, screenshot, vision_prompt=None)` — one new branch.
+- `add_screenshot_if_available` — reduced to a thin wrapper that supplies `state` and delegates to
+  the `responses.py` implementation. Its ~60 call sites are untouched.
 - `execute_code` and `get_view` — new optional `vision_prompt` parameter, passed through.
+
+### `operations/core.py` (modified)
+
+- `get_view_operation` — gains `only_text_feedback` and the vision settings, and routes through
+  the shared helper instead of constructing `ImageContent` directly. This fixes the bug above and
+  brings the one bypass onto the choke point.
 
 No other tool signature changes.
 
@@ -206,13 +250,14 @@ Per `CLAUDE.md`, in the same commits as the code:
 5. `vision_prompt` on `execute_code` and `get_view` overrides the default prompt.
 6. `get_view(focus_object="Name")` finds the object — no `|` parsing anywhere.
 7. Ollama being down produces a visible error, never a crash and never a silent image fallback.
-8. `tests/test_vision.py` passes without FreeCAD or Ollama running.
-9. `freecad-mcp-proxy.py` and its TODO are gone, and no project-specific prompt text survives.
-10. The maintainer's live setup runs the server directly and is verified working before removal.
+8. `get_view` honours `--only-text-feedback`, which it previously ignored.
+9. `tests/test_vision.py` passes without FreeCAD or Ollama running.
+10. `freecad-mcp-proxy.py` and its TODO are gone, and no project-specific prompt text survives.
+11. The maintainer's live setup runs the server directly and is verified working before removal.
 
 ## Out of scope
 
-- Any change to the 59 call sites that pass no `vision_prompt`.
+- Any change to the ~66 tool call sites that pass no `vision_prompt`.
 - Configurable log paths, timeouts, or default prompt.
 - Vision providers other than Ollama.
 - Summarising anything other than screenshots.
