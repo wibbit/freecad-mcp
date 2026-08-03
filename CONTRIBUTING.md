@@ -23,8 +23,8 @@ This project follows a Code of Conduct. By participating, you are expected to:
 
 1. **Fork the repository**
    ```bash
-   # Fork on GitHub, then clone your fork
-   git clone https://github.com/YOUR_USERNAME/freecad-mcp.git
+   # Fork on Codeberg, then clone your fork
+   git clone https://codeberg.org/YOUR_USERNAME/freecad-mcp.git
    cd freecad-mcp
    ```
 
@@ -337,7 +337,7 @@ Additional notes or warnings.
    ```
 
 5. **Create Pull Request**
-   - Go to GitHub and create a Pull Request
+   - Go to Codeberg and create a Pull Request
    - Fill in the PR template
    - Link related issues
    - Wait for review
@@ -440,7 +440,7 @@ Any other context or screenshots.
 ## 📞 Getting Help
 
 - **Issues**: For bug reports and feature requests
-- **GitHub Discussions**: For questions and general discussion
+- **Issues**: For questions, bug reports and feature requests
 - **FreeCAD Forum**: For FreeCAD-specific questions
 
 ## 🙏 Recognition
@@ -454,5 +454,5 @@ Thank you for contributing to FreeCAD MCP! 🚀
 
 ---
 
-**Questions?** Feel free to ask in GitHub Discussions or open an issue.
+**Questions?** Feel free to open an issue.
 

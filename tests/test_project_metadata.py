@@ -228,3 +228,15 @@ class TestClientNeutrality:
         """The tracker is on Codeberg; no doc should still call it GitHub Issues."""
         for path in DOC_FILES:
             assert "GitHub Issues" not in read(path), path
+
+    def test_no_doc_routes_contribution_to_github(self):
+        """Forks, PRs and questions belong on Codeberg now.
+
+        Deliberately phrase-based rather than a blanket "github" ban: docs
+        legitimately link to FreeCAD's github.io docs and the MCP SDK repo.
+        """
+        banned = ["Fork on GitHub", "GitHub Discussions", "Go to GitHub"]
+        for path in DOC_FILES:
+            text = read(path)
+            for phrase in banned:
+                assert phrase not in text, f"{path}: {phrase}"
