@@ -565,7 +565,7 @@ Assembly
    - View > Panels > Python console
    - Check for error messages
 
-3. **GitHub Issues**
+3. **Issues**
    - [Report bugs](https://codeberg.org/wibbit/freecad-mcp/issues)
    - Search existing issues
 

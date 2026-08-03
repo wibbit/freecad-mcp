@@ -211,7 +211,7 @@ Create a radial engine cylinder arrangement:
 
 ## Getting Help
 
-- **GitHub Issues**: [Report bugs or request features](https://codeberg.org/wibbit/freecad-mcp/issues)
+- **Issues**: [Report bugs or request features](https://codeberg.org/wibbit/freecad-mcp/issues)
 - **Documentation**: Check [User Guide](USER_GUIDE.md)
 - **FreeCAD Forum**: [Ask FreeCAD questions](https://forum.freecad.org/)
 

@@ -223,3 +223,8 @@ class TestClientNeutrality:
         """Upstream may be credited as origin, never used as the clone source."""
         for path in DOC_FILES:
             assert "git clone https://github.com/neka-nat/freecad-mcp.git" not in read(path), path
+
+    def test_no_doc_labels_its_tracker_as_github(self):
+        """The tracker is on Codeberg; no doc should still call it GitHub Issues."""
+        for path in DOC_FILES:
+            assert "GitHub Issues" not in read(path), path
