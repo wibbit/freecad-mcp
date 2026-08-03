@@ -48,7 +48,7 @@ FreeCAD (CAD Engine)
 
 Before starting, ensure you have:
 - ✅ FreeCAD 0.21+ installed
-- ✅ Python 3.10+ installed
+- ✅ Python 3.12+ installed
 - ✅ An MCP client installed (Claude Code or Claude Desktop)
 - ✅ FreeCAD MCP addon installed
 - ✅ Your MCP client configured
@@ -62,9 +62,12 @@ See [Quick Start Guide](QUICKSTART.md) for installation instructions.
    - Select "MCP Addon" workbench
    - Click "Start RPC Server"
 
-2. **Open Claude Desktop**
-   - You should see "freecad" in available tools
-   - If not, restart Claude Desktop
+2. **Start your MCP client**
+   - Claude Code: run `claude` in a terminal; `claude mcp list` should show
+     `freecad` connected
+   - Claude Desktop: open the app — you should see "freecad" in available tools
+   - If the tools are missing, restart the client (Claude Code: exit and relaunch;
+     Claude Desktop: quit and reopen the app)
 
 3. **Try a Simple Command**
    ```
@@ -490,10 +493,13 @@ Assembly
 - No tools available
 
 **Solutions:**
-1. Restart Claude Desktop
-2. Check `claude_desktop_config.json` syntax
+1. Restart your MCP client (Claude Code: exit and relaunch, then confirm with
+   `claude mcp list`; Claude Desktop: quit and reopen the app)
+2. Check your client config syntax — `~/.claude.json` for Claude Code,
+   `claude_desktop_config.json` for Claude Desktop
 3. Verify FreeCAD RPC server running
-4. Check Claude Desktop logs
+4. Check your client's logs (Claude Code: `claude mcp list` and the server's stderr;
+   Claude Desktop: the application log directory)
 
 #### Issue: Connection Refused
 

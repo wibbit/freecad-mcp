@@ -31,18 +31,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   undocumented despite being a common Linux install route.
 - **`tests/test_project_metadata.py`** — guards branding, attribution and licensing
   invariants. Runs without FreeCAD.
-- **`./check` test wrapper** — runs `uv run --extra dev python -m pytest` and passes any
-  arguments straight through. The working invocation was previously undocumented and easy to
-  get wrong: `uv run --extra dev pytest` fails because uv does not put the console script on
-  `PATH` for extras, and `--with pytest` ignores the pytest version pinned in `pyproject.toml`.
-  Note that a bare `./check` exercises the integration suite against a running FreeCAD.
+- **`./check` test wrapper** — runs `uv run --extra dev python -m pytest` from the repo root
+  and passes any arguments straight through, so the suite behaves the same from any working
+  directory. `--extra dev` resolves pytest from the project's declared dev dependency. Note
+  that a bare `./check` exercises the integration suite against a running FreeCAD.
 - **Vision proxy tracked** — `freecad-mcp-proxy.py` and its TODO are now in version control.
   Integration into the package remains outstanding.
+- **Repository published on Codeberg** — the project is now live at
+  [codeberg.org/wibbit/freecad-mcp](https://codeberg.org/wibbit/freecad-mcp), with its full
+  commit history.
 
 ### 🐛 Fixed
 
 - **Misleading badges removed** — the MseeP security-assessment badge and the `contrib.rocks`
   contributor image both described upstream's repository, not this one.
+- **Install instructions installed the wrong package** — the documented `uvx freecad-mcp`
+  resolves on PyPI to an unrelated package. This project is not published to PyPI, so every
+  documented invocation now uses
+  `uvx --from git+https://codeberg.org/wibbit/freecad-mcp freecad-mcp`.
+- **`mcp` dependency capped below 2.0** — `mcp[cli]>=1.12.2` had no upper bound, so a fresh
+  install resolved to `mcp` 2.0.0, which no longer provides `mcp.server.fastmcp` and made the
+  server fail at import with `ModuleNotFoundError`. Now `mcp[cli]>=1.12.2,<2.0.0`.
 
 ---
 

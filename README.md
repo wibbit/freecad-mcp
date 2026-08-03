@@ -8,6 +8,10 @@ FEM analysis and technical drawings, exposed as MCP tools.
 
 ## Demo
 
+The recordings and shared conversation below were produced by the upstream
+project ([`neka-nat/freecad-mcp`](https://github.com/neka-nat/freecad-mcp)) and are
+reproduced here to show the general idea; they are not output from this fork.
+
 ### Design a flange
 
 ![demo](./assets/freecad_mcp4.gif)
@@ -87,12 +91,18 @@ You can disable it at any time by unchecking **Auto-Start Server** in the same m
 
 Pre-installation of the [uvx](https://docs.astral.sh/uv/guides/tools/) is required.
 
+> **Do not run a bare `uvx freecad-mcp`.** That name resolves on PyPI to a
+> different, unrelated package (the upstream project's release), which does not
+> provide this project's tools. This project is not published to PyPI — install it
+> straight from Codeberg with `--from git+https://codeberg.org/wibbit/freecad-mcp`,
+> exactly as shown in every example below.
+
 Then configure your MCP client.
 
 ### Claude Code (CLI)
 
 ```bash
-claude mcp add freecad -- uvx freecad-mcp
+claude mcp add freecad -- uvx --from git+https://codeberg.org/wibbit/freecad-mcp freecad-mcp
 ```
 
 Or edit `~/.claude.json` directly, using the same `mcpServers` block shown below.
@@ -109,6 +119,7 @@ For user.
     "freecad": {
       "command": "uvx",
       "args": [
+        "--from", "git+https://codeberg.org/wibbit/freecad-mcp",
         "freecad-mcp"
       ]
     }
@@ -124,6 +135,7 @@ If you want to save token, you can set `only_text_feedback` to `true` and use on
     "freecad": {
       "command": "uvx",
       "args": [
+        "--from", "git+https://codeberg.org/wibbit/freecad-mcp",
         "freecad-mcp",
         "--only-text-feedback"
       ]
@@ -183,6 +195,7 @@ Pass the `--host` flag with the IP address or hostname of the machine running Fr
     "freecad": {
       "command": "uvx",
       "args": [
+        "--from", "git+https://codeberg.org/wibbit/freecad-mcp",
         "freecad-mcp",
         "--host", "192.168.1.100"
       ]
@@ -214,7 +227,12 @@ The `--host` value is validated on startup — it must be a valid IPv4/IPv6 addr
 
 Full signatures and examples: [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md).
 
-## Tools
+## A few tools at a glance
+
+A small, illustrative selection — **not** the full tool surface. The Features table
+above summarises the whole surface, and
+[`docs/API_REFERENCE.md`](docs/API_REFERENCE.md) lists every tool with signatures and
+examples.
 
 * `create_document`: Create a new document in FreeCAD.
 * `create_object`: Create a new object in FreeCAD.

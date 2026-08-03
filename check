@@ -6,10 +6,11 @@
 #   ./check tests/test_project_metadata.py   # one file
 #   ./check -k licence -v                    # pytest expression
 #
-# Why this wrapper exists: `uv run --extra dev pytest` fails, because uv does
-# not put the pytest console script on PATH for extras. `python -m pytest` is
-# the working form, and `--extra dev` (rather than `--with pytest`) honours the
-# pytest version pinned in pyproject.toml instead of grabbing the latest.
+# Why this wrapper exists: it cds to the repo root first (so the suite runs the
+# same way from any directory), passes every argument through to pytest, and
+# carries the caution below where contributors will see it. It uses
+# `--extra dev`, so pytest is resolved from the project's declared dev
+# dependency rather than from whatever happens to be installed.
 #
 # CAUTION: a bare `./check` runs the integration suite too. Those tests talk to
 # a running FreeCAD over RPC and create/close scratch documents in your live

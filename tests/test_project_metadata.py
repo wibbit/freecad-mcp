@@ -7,6 +7,7 @@ upstream project creeps into user-facing text.
 """
 
 from pathlib import Path
+import re
 import tomllib
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -32,6 +33,38 @@ def read(relpath: str) -> str:
 def load_pyproject() -> dict:
     """Return the parsed pyproject.toml as a dict."""
     return tomllib.loads(read("pyproject.toml"))
+
+
+def _doc_files() -> list[str]:
+    """Every prose document in the repo, as repository-relative paths.
+
+    Globbed rather than listed, so a document added later is covered by the
+    guards below from the moment it exists. The globs are deliberately
+    non-recursive, which excludes `docs/superpowers/`: that directory holds the
+    migration's own spec and plan, which quote upstream URLs and tool counts as
+    the subject matter under discussion.
+    """
+    paths = sorted(REPO_ROOT.glob("*.md")) + sorted(REPO_ROOT.glob("docs/*.md"))
+    return [str(p.relative_to(REPO_ROOT)) for p in paths]
+
+
+DOC_FILES = _doc_files()
+
+
+def current_text(relpath: str) -> str:
+    """Return the part of a document that describes the project as it is now.
+
+    Identical to `read` for every file but `CHANGELOG.md`, where the sections
+    for released versions are trimmed off. Those entries are a historical
+    record: a tool count that was accurate at the time of a release is not a
+    stale claim about the present, and must not be rewritten to satisfy a guard.
+    """
+    text = read(relpath)
+    if relpath == "CHANGELOG.md":
+        first_release = re.search(r"^## \[\d", text, re.MULTILINE)
+        if first_release:
+            return text[: first_release.start()]
+    return text
 
 
 class TestLicence:
@@ -166,19 +199,13 @@ class TestReadmeContent:
         ]:
             assert group in readme, f"missing feature group: {group}"
 
+
+class TestDocsHygiene:
     def test_no_hard_tool_count(self):
-        """Counts go stale on every tool added."""
-        import re
-        assert not re.search(r"\b\d{2,}\s+tools\b", read("README.md"))
-
-
-DOC_FILES = [
-    "README.md",
-    "docs/QUICKSTART.md",
-    "docs/USER_GUIDE.md",
-    "docs/session_guide.md",
-    "CONTRIBUTING.md",
-]
+        """Counts go stale on every tool added, in any doc, not just the README."""
+        for path in DOC_FILES:
+            match = re.search(r"\b\d{2,}\s+tools\b", current_text(path))
+            assert not match, f"{path}: hard tool count {match.group(0)!r}"
 
 
 class TestClientNeutrality:
@@ -206,10 +233,18 @@ class TestClientNeutrality:
         )
         assert "Claude Code" in line
 
-    def test_user_guide_intro_is_client_neutral(self):
-        """The opening description must not imply Desktop is the only client."""
-        intro = read("docs/USER_GUIDE.md")[:2000]
-        assert "MCP client" in intro
+    def test_user_guide_body_has_no_desktop_only_imperatives(self):
+        """The body must not instruct every reader to act on Claude Desktop.
+
+        The old check looked for the phrase "MCP client" in the first 2000
+        characters, which the intro sentence satisfies on its own no matter what
+        the rest of the guide tells the reader to do. Desktop-specific detail is
+        welcome — `claude_desktop_config.json` paths, "Claude Desktop: reopen the
+        app" — but an unqualified instruction is not.
+        """
+        guide = read("docs/USER_GUIDE.md")
+        for imperative in ["Restart Claude Desktop", "Open Claude Desktop"]:
+            assert imperative not in guide, f"Desktop-only instruction: {imperative!r}"
 
     def test_quickstart_retains_desktop_config_paths(self):
         """Desktop paths are accurate for Desktop users; supplement, never delete."""

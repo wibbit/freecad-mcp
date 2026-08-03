@@ -41,5 +41,9 @@ OpenCode ones if relevant.
 ## Dependencies / context
 - Needs a local **Ollama** with a vision model (currently `llava:7b`).
 - Logs to `/tmp/freecad-mcp-proxy.log`.
-- This file is currently **untracked** in git — commit it on a working branch when you
-  start.
+- This file and `freecad-mcp-proxy.py` are **tracked** in git — they were committed
+  during the Codeberg migration. Do the rework on a working branch.
+- The script as committed is maintainer-specific: `freecad-mcp-proxy.py` hardcodes the
+  absolute path `/home/dfurlong/git/freecad-mcp` (in `UPSTREAM_CMD` and in the usage
+  docstring), so it cannot run for anyone else — genericising those paths is a
+  prerequisite of the integration work in step 1 above.

@@ -2,9 +2,9 @@
 
 Thank you for your interest in contributing to FreeCAD MCP! This document provides guidelines and instructions for contributing.
 
-## 🎯 Code of Conduct
+## 🎯 How we expect people to behave
 
-This project follows a Code of Conduct. By participating, you are expected to:
+By participating in this project, you are expected to:
 - Be respectful and inclusive
 - Accept constructive criticism
 - Focus on what is best for the community
@@ -14,7 +14,7 @@ This project follows a Code of Conduct. By participating, you are expected to:
 
 ### Prerequisites
 
-- Python 3.10 or higher
+- Python 3.12 or higher
 - FreeCAD 0.21 or higher
 - Git
 - Basic understanding of Python and FreeCAD API
@@ -39,10 +39,30 @@ This project follows a Code of Conduct. By participating, you are expected to:
    ```
 
 4. **Install FreeCAD addon**
+
+   Copy `addon/FreeCADMCP` into your FreeCAD Mod directory. Which one that is
+   depends on your platform and how FreeCAD was installed — note that the macOS
+   and Arch paths are version-numbered, and an unversioned path is not scanned by
+   FreeCAD 1.1:
+
    ```bash
-   # Copy addon to FreeCAD directory
-   cp -r addon/FreeCADMCP ~/.FreeCAD/Mod/
+   # Windows:  %APPDATA%\FreeCAD\Mod\
+
+   # macOS (FreeCAD 1.1; use v1-0 for FreeCAD 1.0)
+   cp -r addon/FreeCADMCP ~/Library/Application\ Support/FreeCAD/v1-1/Mod/
+
+   # Linux (Ubuntu/Debian)
+   cp -r addon/FreeCADMCP ~/.FreeCAD/Mod/           # or ~/.local/share/FreeCAD/Mod
+   # Linux (Ubuntu snap): ~/snap/freecad/common/Mod/
+
+   # Linux (Arch/CachyOS, FreeCAD 1.1 from extra/freecad)
+   cp -r addon/FreeCADMCP ~/.local/share/FreeCAD/v1-1/Mod/
+
+   # Linux (Flatpak)
+   cp -r addon/FreeCADMCP ~/.var/app/org.freecad.FreeCAD/data/FreeCAD/v1-1/Mod/
    ```
+
+   The full list also appears in [`README.md`](README.md#install-addon).
 
 5. **Start FreeCAD with RPC server**
    - Launch FreeCAD
@@ -167,10 +187,11 @@ test/add-boolean-tests
    uv run --extra dev python -m pytest
    ```
 
-   Two gotchas the wrapper exists to hide: `uv run --extra dev pytest` fails
-   because uv does not put the console script on `PATH` for extras, and
-   `--with pytest` silently ignores the pytest version pinned in
-   `pyproject.toml`.
+   The wrapper is a convenience, not a workaround: it changes to the repo root
+   first so the suite behaves the same from any directory, passes arguments
+   straight through, and keeps the caution below in front of contributors. It
+   uses `--extra dev`, so pytest is resolved from the project's declared dev
+   dependency.
 
    > **A bare run touches a live FreeCAD.** The integration tests create and
    > close scratch documents over RPC in whatever FreeCAD session is running.
@@ -339,7 +360,8 @@ Additional notes or warnings.
 
 5. **Create Pull Request**
    - Go to Codeberg and create a Pull Request
-   - Fill in the PR template
+   - In the description, say what the change does and why, how you tested it, and
+     note any documentation or CHANGELOG updates included
    - Link related issues
    - Wait for review
 

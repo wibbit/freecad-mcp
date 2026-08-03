@@ -4,7 +4,7 @@ Get started with FreeCAD MCP in 5 minutes!
 
 ## Prerequisites
 
-- ✅ Python 3.10 or higher
+- ✅ Python 3.12 or higher
 - ✅ FreeCAD 0.21 or higher installed
 - ✅ An MCP client installed (Claude Code or Claude Desktop)
 
@@ -18,15 +18,17 @@ Get started with FreeCAD MCP in 5 minutes!
 ```
 Usually: `C:\Users\YourName\AppData\Roaming\FreeCAD\Mod\`
 
-**Mac:**
-```
-~/Library/Application Support/FreeCAD/Mod/
-```
+**Mac** (the path is versioned — an unversioned `.../FreeCAD/Mod/` is not scanned by
+FreeCAD 1.1, and the addon will silently never appear):
+- FreeCAD 1.1: `~/Library/Application Support/FreeCAD/v1-1/Mod/`
+- FreeCAD 1.0: `~/Library/Application Support/FreeCAD/v1-0/Mod/`
 
 **Linux:**
 - Ubuntu: `~/.FreeCAD/Mod/`
 - Ubuntu (snap): `~/snap/freecad/common/Mod/`
 - Debian: `~/.local/share/FreeCAD/Mod`
+- Arch / CachyOS (FreeCAD 1.1 from `extra/freecad`): `~/.local/share/FreeCAD/v1-1/Mod/`
+- Flatpak: `~/.var/app/org.freecad.FreeCAD/data/FreeCAD/v1-1/Mod/`
 
 ### Install the Addon
 
@@ -39,8 +41,20 @@ cd freecad-mcp
 # Windows
 xcopy /E /I addon\FreeCADMCP "%APPDATA%\FreeCAD\Mod\FreeCADMCP"
 
-# Mac/Linux
+# Linux (Ubuntu/Debian)
 cp -r addon/FreeCADMCP ~/.FreeCAD/Mod/
+
+# Linux (Arch/CachyOS, FreeCAD 1.1 from extra/freecad)
+mkdir -p ~/.local/share/FreeCAD/v1-1/Mod/
+cp -r addon/FreeCADMCP ~/.local/share/FreeCAD/v1-1/Mod/
+
+# Linux (Flatpak)
+mkdir -p ~/.var/app/org.freecad.FreeCAD/data/FreeCAD/v1-1/Mod/
+cp -r addon/FreeCADMCP ~/.var/app/org.freecad.FreeCAD/data/FreeCAD/v1-1/Mod/
+
+# macOS (FreeCAD 1.1)
+mkdir -p ~/Library/Application\ Support/FreeCAD/v1-1/Mod/
+cp -r addon/FreeCADMCP ~/Library/Application\ Support/FreeCAD/v1-1/Mod/
 ```
 
 ## Step 2: Start FreeCAD Server (30 seconds)
@@ -59,13 +73,19 @@ cp -r addon/FreeCADMCP ~/.FreeCAD/Mod/
 
 ## Step 3: Configure your MCP client (1 minute)
 
+> ⚠️ **Do not run a bare `uvx freecad-mcp`.** On PyPI that name belongs to a
+> different, unrelated package (the upstream project's release) and it will not
+> provide this project's tools. This project is not published to PyPI, so every
+> invocation below installs it directly from Codeberg via
+> `--from git+https://codeberg.org/wibbit/freecad-mcp`.
+
 ### Claude Code (CLI)
 
 ```bash
-claude mcp add freecad -- uvx freecad-mcp
+claude mcp add freecad -- uvx --from git+https://codeberg.org/wibbit/freecad-mcp freecad-mcp
 ```
 
-That is the whole setup — skip to Step 4.
+Verify with `claude mcp list`, then skip to Step 4 — that is the whole setup.
 
 ### Claude Desktop
 
@@ -95,7 +115,7 @@ Open the file and add:
   "mcpServers": {
     "freecad": {
       "command": "uvx",
-      "args": ["freecad-mcp"]
+      "args": ["--from", "git+https://codeberg.org/wibbit/freecad-mcp", "freecad-mcp"]
     }
   }
 }
@@ -107,7 +127,7 @@ Open the file and add:
   "mcpServers": {
     "freecad": {
       "command": "uvx",
-      "args": ["freecad-mcp", "--only-text-feedback"]
+      "args": ["--from", "git+https://codeberg.org/wibbit/freecad-mcp", "freecad-mcp", "--only-text-feedback"]
     }
   }
 }
@@ -186,8 +206,10 @@ Create a radial engine cylinder arrangement:
 
 **Solution:**
 1. Check FreeCAD RPC server is running (green indicator)
-2. Restart Claude Desktop
-3. Verify config file syntax is correct
+2. Restart your MCP client — Claude Code: check `claude mcp list` shows `freecad`
+   connected; Claude Desktop: close and reopen the app
+3. Verify config file syntax is correct (Claude Code: `~/.claude.json`;
+   Claude Desktop: `claude_desktop_config.json`)
 
 ### Problem: "Connection refused"
 
@@ -253,7 +275,7 @@ Ask for specific views:
 
 Now that you have FreeCAD MCP working, explore:
 
-1. **[Complete User Guide](USER_GUIDE.md)** - All 52 tools explained
+1. **[Complete User Guide](USER_GUIDE.md)** - Feature walkthrough and worked examples
 2. **[Corsair Workflow](CORSAIR_MODELING_WORKFLOW.md)** - Real-world aircraft project
 3. **[Contributing](../CONTRIBUTING.md)** - Help improve FreeCAD MCP
 
