@@ -164,3 +164,68 @@ class TestServerStateDefaults:
         assert s.vision_summary is False
         assert s.vision_model == vision.DEFAULT_OLLAMA_MODEL
         assert s.vision_url == vision.DEFAULT_OLLAMA_URL
+
+
+class TestServerWrapper:
+    def test_wrapper_delegates_with_state(self, monkeypatch):
+        """server's helper must read module state, not take flags itself."""
+        from freecad_mcp import server
+
+        seen = {}
+
+        def fake(response, screenshot, only_text_feedback, **kw):
+            seen["only_text_feedback"] = only_text_feedback
+            seen.update(kw)
+            return response
+
+        monkeypatch.setattr(server, "_add_screenshot", fake)
+        monkeypatch.setattr(server.state, "only_text_feedback", False)
+        monkeypatch.setattr(server.state, "vision_summary", True)
+        monkeypatch.setattr(server.state, "vision_model", "llava:13b")
+        monkeypatch.setattr(server.state, "vision_url", "http://box:1234")
+
+        server.add_screenshot_if_available([], "B64", vision_prompt="Is it flush?")
+
+        assert seen["only_text_feedback"] is False
+        assert seen["vision_summary"] is True
+        assert seen["vision_model"] == "llava:13b"
+        assert seen["vision_url"] == "http://box:1234"
+        assert seen["vision_prompt"] == "Is it flush?"
+
+    def test_wrapper_works_without_a_prompt(self, monkeypatch):
+        """The ~60 existing call sites pass two arguments and must keep working."""
+        from freecad_mcp import server
+
+        monkeypatch.setattr(server.state, "only_text_feedback", False)
+        monkeypatch.setattr(server.state, "vision_summary", False)
+        out = server.add_screenshot_if_available([], "B64")
+        assert len(out) == 1
+        assert out[0].type == "image"
+
+
+class TestFlagParsing:
+    def test_flags_default_off(self):
+        from freecad_mcp.server import _build_arg_parser
+
+        args = _build_arg_parser().parse_args([])
+        assert args.vision_summary is False
+        assert args.vision_model == "llava:7b"
+        assert args.vision_url == "http://localhost:11434"
+
+    def test_flags_can_be_set(self):
+        from freecad_mcp.server import _build_arg_parser
+
+        args = _build_arg_parser().parse_args(
+            ["--vision-summary", "--vision-model", "llava:13b",
+             "--vision-url", "http://box:1234"]
+        )
+        assert args.vision_summary is True
+        assert args.vision_model == "llava:13b"
+        assert args.vision_url == "http://box:1234"
+
+    def test_existing_flags_still_parse(self):
+        from freecad_mcp.server import _build_arg_parser
+
+        args = _build_arg_parser().parse_args(["--only-text-feedback", "--host", "1.2.3.4"])
+        assert args.only_text_feedback is True
+        assert args.host == "1.2.3.4"
