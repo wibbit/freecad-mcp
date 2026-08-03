@@ -2,6 +2,8 @@ import json
 
 from mcp.types import ImageContent, TextContent
 
+from . import vision
+
 type ToolResponse = list[TextContent | ImageContent]
 
 
@@ -37,7 +39,25 @@ def add_screenshot_if_available(
     response: ToolResponse,
     screenshot: str | None,
     only_text_feedback: bool,
+    *,
+    vision_summary: bool = False,
+    vision_model: str = vision.DEFAULT_OLLAMA_MODEL,
+    vision_url: str = vision.DEFAULT_OLLAMA_URL,
+    vision_prompt: str | None = None,
 ) -> ToolResponse:
+    """Append a screenshot to a response, as an image or as a text description.
+
+    `only_text_feedback` is checked first and wins: it means "no visual content
+    at all", so no description is produced and no vision call is made.
+    """
     if only_text_feedback or screenshot is None:
         return response
+    if vision_summary:
+        description = vision.summarise(
+            screenshot,
+            vision_prompt or vision.DEFAULT_VISION_PROMPT,
+            url=vision_url,
+            model=vision_model,
+        )
+        return [*response, TextContent(type="text", text=description)]
     return [*response, ImageContent(type="image", data=screenshot, mimeType="image/png")]

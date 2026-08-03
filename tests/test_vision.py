@@ -68,3 +68,99 @@ class TestDefaults:
     def test_default_endpoints(self):
         assert vision.DEFAULT_OLLAMA_URL == "http://localhost:11434"
         assert vision.DEFAULT_OLLAMA_MODEL == "llava:7b"
+
+
+from freecad_mcp import responses
+
+
+def _fake_summarise(monkeypatch, text="DESCRIPTION"):
+    """Replace vision.summarise and record the prompt it was given."""
+    seen = {}
+
+    def fake(image_b64, prompt, *, url, model, timeout=60):
+        seen["prompt"] = prompt
+        seen["url"] = url
+        seen["model"] = model
+        return text
+
+    monkeypatch.setattr(responses.vision, "summarise", fake)
+    return seen
+
+
+class TestScreenshotBranching:
+    def test_image_by_default(self):
+        out = responses.add_screenshot_if_available([], "B64DATA", False)
+        assert len(out) == 1
+        assert out[0].type == "image"
+        assert out[0].data == "B64DATA"
+
+    def test_only_text_feedback_suppresses_image(self):
+        assert responses.add_screenshot_if_available([], "B64DATA", True) == []
+
+    def test_no_screenshot_appends_nothing(self):
+        assert responses.add_screenshot_if_available([], None, False) == []
+
+    def test_vision_summary_replaces_image_with_text(self, monkeypatch):
+        _fake_summarise(monkeypatch)
+        out = responses.add_screenshot_if_available(
+            [], "B64DATA", False, vision_summary=True
+        )
+        assert len(out) == 1
+        assert out[0].type == "text"
+        assert out[0].text == "DESCRIPTION"
+
+    def test_only_text_feedback_beats_vision_summary(self, monkeypatch):
+        """The more restrictive flag wins, and no Ollama call is made."""
+        called = {"yes": False}
+
+        def boom(*a, **k):
+            called["yes"] = True
+            return "should not happen"
+
+        monkeypatch.setattr(responses.vision, "summarise", boom)
+        out = responses.add_screenshot_if_available(
+            [], "B64DATA", True, vision_summary=True
+        )
+        assert out == []
+        assert called["yes"] is False
+
+    def test_default_prompt_used_when_none_given(self, monkeypatch):
+        seen = _fake_summarise(monkeypatch)
+        responses.add_screenshot_if_available([], "B64DATA", False, vision_summary=True)
+        assert seen["prompt"] == vision.DEFAULT_VISION_PROMPT
+
+    def test_custom_prompt_overrides_default(self, monkeypatch):
+        seen = _fake_summarise(monkeypatch)
+        responses.add_screenshot_if_available(
+            [], "B64DATA", False, vision_summary=True, vision_prompt="Is it flush?"
+        )
+        assert seen["prompt"] == "Is it flush?"
+
+    def test_model_and_url_are_passed_through(self, monkeypatch):
+        seen = _fake_summarise(monkeypatch)
+        responses.add_screenshot_if_available(
+            [], "B64DATA", False,
+            vision_summary=True, vision_model="llava:13b", vision_url="http://box:1234",
+        )
+        assert seen["model"] == "llava:13b"
+        assert seen["url"] == "http://box:1234"
+
+    def test_existing_response_items_are_preserved(self, monkeypatch):
+        _fake_summarise(monkeypatch)
+        existing = responses.text_response("hello")
+        out = responses.add_screenshot_if_available(
+            existing, "B64DATA", False, vision_summary=True
+        )
+        assert len(out) == 2
+        assert out[0].text == "hello"
+        assert out[1].text == "DESCRIPTION"
+
+
+class TestServerStateDefaults:
+    def test_vision_is_off_by_default(self):
+        from freecad_mcp.server_state import ServerState
+
+        s = ServerState()
+        assert s.vision_summary is False
+        assert s.vision_model == vision.DEFAULT_OLLAMA_MODEL
+        assert s.vision_url == vision.DEFAULT_OLLAMA_URL
