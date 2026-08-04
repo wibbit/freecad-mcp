@@ -53,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   description from a local Ollama vision model, saving roughly 2,000-5,000 tokens per call.
   `--vision-model` and `--vision-url` configure it; `execute_code` and `get_view` take an optional
   `vision_prompt` for per-call questions. Off by default. Replaces the standalone
-  `freecad-mcp-proxy.py`, which is scheduled for removal in a follow-up change.
+  `freecad-mcp-proxy.py`, which is removed.
 
 ### 🐛 Fixed
 
