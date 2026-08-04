@@ -207,6 +207,39 @@ Pass the `--host` flag with the IP address or hostname of the machine running Fr
 
 The `--host` value is validated on startup — it must be a valid IPv4/IPv6 address or hostname.
 
+## Vision summary (optional)
+
+Viewport screenshots cost roughly 2,000-5,000 tokens each. If you run
+[Ollama](https://ollama.com/) locally with a vision model, the server can replace each screenshot
+with a short text description instead:
+
+```json
+{
+  "mcpServers": {
+    "freecad": {
+      "command": "uvx",
+      "args": [
+        "--from", "git+https://codeberg.org/wibbit/freecad-mcp", "freecad-mcp",
+        "--vision-summary"
+      ]
+    }
+  }
+}
+```
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--vision-summary` | off | Replace screenshots with a text description |
+| `--vision-model` | `llava:7b` | Ollama model to use |
+| `--vision-url` | `http://localhost:11434` | Ollama base URL |
+
+`execute_code` and `get_view` accept a `vision_prompt` argument to ask something specific about
+that particular screenshot, for example *"Is there a gap between the sleeve and the bore?"*.
+
+If Ollama is unreachable the response says so — the screenshot is not sent instead, since that
+would silently undo the token saving. `--only-text-feedback` takes precedence over this feature and
+suppresses descriptions as well as images.
+
 ## Features
 
 | Group | Covers |

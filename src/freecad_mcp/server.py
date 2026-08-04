@@ -13,6 +13,7 @@ from .operations import (
 )
 from .prompt_text import ASSET_CREATION_STRATEGY
 from .responses import parse_execute_result
+from .responses import add_screenshot_if_available as _add_screenshot
 from .server_state import ServerState
 
 from .modeling_tools import (
@@ -145,15 +146,30 @@ def _log_tool(func):
 state = ServerState()
 
 
-def add_screenshot_if_available(response: list, screenshot) -> list:
-    if screenshot and not state.only_text_feedback:
-        response.append(ImageContent(type="image", data=screenshot, mimeType="image/png"))
-    elif not screenshot and not state.only_text_feedback:
-        response.append(TextContent(
+def add_screenshot_if_available(
+    response: list,
+    screenshot,
+    vision_prompt: str | None = None,
+) -> list:
+    """Append a screenshot to a response, using the server's configured mode.
+
+    A thin wrapper over the shared implementation so the ~60 call sites in this
+    module do not each need to know about server state.
+    """
+    if not screenshot and not state.only_text_feedback:
+        return [*response, TextContent(
             type="text",
             text="Note: Visual preview unavailable in this view type (e.g. TechDraw or Spreadsheet). Switch to a 3D view for screenshots.",
-        ))
-    return response
+        )]
+    return _add_screenshot(
+        response,
+        screenshot,
+        state.only_text_feedback,
+        vision_summary=state.vision_summary,
+        vision_model=state.vision_model,
+        vision_url=state.vision_url,
+        vision_prompt=vision_prompt,
+    )
 
 
 @asynccontextmanager
@@ -588,11 +604,13 @@ else:
 
 @mcp.tool()
 @_log_tool
-def execute_code(ctx: Context, code: str) -> list[TextContent | ImageContent]:
+def execute_code(ctx: Context, code: str, vision_prompt: str | None = None) -> list[TextContent | ImageContent]:
     """Execute arbitrary Python code in FreeCAD.
 
     Args:
         code: The Python code to execute.
+        vision_prompt: Optional question to ask the vision model about the resulting
+            screenshot. Only used when the server runs with --vision-summary.
 
     Returns:
         A message indicating the success or failure of the code execution, the output of the code execution, and a screenshot of the object.
@@ -603,7 +621,7 @@ def execute_code(ctx: Context, code: str) -> list[TextContent | ImageContent]:
         if res["success"]:
             screenshot = freecad.get_active_screenshot()
             response = [TextContent(type="text", text=f"Code executed successfully.\nOutput: {res['data']['output']}")]
-            return add_screenshot_if_available(response, screenshot)
+            return add_screenshot_if_available(response, screenshot, vision_prompt)
         else:
             raise Exception(f"Failed to execute code: {res['error']}")
     except Exception as e:
@@ -619,6 +637,7 @@ def get_view(
     width: int | None = None,
     height: int | None = None,
     focus_object: str | None = None,
+    vision_prompt: str | None = None,
 ) -> list[ImageContent | TextContent]:
     """Get a screenshot of the active view.
 
@@ -637,11 +656,24 @@ def get_view(
         width: The width of the screenshot in pixels. If not specified, uses the viewport width.
         height: The height of the screenshot in pixels. If not specified, uses the viewport height.
         focus_object: The name of the object to focus on. If not specified, fits all objects in the view.
+        vision_prompt: Optional question to ask the vision model about the resulting
+            screenshot. Only used when the server runs with --vision-summary.
 
     Returns:
         A screenshot of the active view.
     """
-    return get_view_operation(get_freecad_connection(), view_name, width, height, focus_object)
+    return get_view_operation(
+        get_freecad_connection(),
+        view_name,
+        width,
+        height,
+        focus_object,
+        state.only_text_feedback,
+        vision_summary=state.vision_summary,
+        vision_model=state.vision_model,
+        vision_url=state.vision_url,
+        vision_prompt=vision_prompt,
+    )
 
 
 @mcp.tool()
@@ -3050,19 +3082,32 @@ def import_dxf(ctx: Context, doc_name: str, file_path: str, sketch_name: str, sc
     return _import_dxf(ctx, freecad, add_screenshot_if_available, doc_name, file_path, sketch_name, scale)
 
 
-def main():
-    """Run the MCP server"""
+def _build_arg_parser():
     import argparse
-    import sys
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--only-text-feedback", action="store_true", help="Only return text feedback")
     parser.add_argument("--host", type=_validate_host, default="localhost", help="Host address of the FreeCAD RPC server to connect to (default: localhost)")
-    args = parser.parse_args()
+    parser.add_argument("--vision-summary", action="store_true", help="Replace viewport screenshots with a text description from a local vision model (requires Ollama)")
+    parser.add_argument("--vision-model", default="llava:7b", help="Ollama vision model to use (default: llava:7b)")
+    parser.add_argument("--vision-url", default="http://localhost:11434", help="Ollama base URL (default: http://localhost:11434)")
+    return parser
+
+
+def main():
+    """Run the MCP server"""
+    import sys
+
+    args = _build_arg_parser().parse_args()
     state.only_text_feedback = args.only_text_feedback
     state.rpc_host = args.host
+    state.vision_summary = args.vision_summary
+    state.vision_model = args.vision_model
+    state.vision_url = args.vision_url
     logger.info(f"Only text feedback: {state.only_text_feedback}")
     logger.info(f"Connecting to FreeCAD RPC server at: {state.rpc_host}")
+    if state.vision_summary:
+        logger.info(f"Vision summary enabled: {state.vision_model} at {state.vision_url}")
 
     if not hasattr(sys.stdin, "buffer"):
         print(

@@ -42,7 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   directory. `--extra dev` resolves pytest from the project's declared dev dependency. Note
   that a bare `./check` exercises the integration suite against a running FreeCAD.
 - **Vision proxy tracked** — `freecad-mcp-proxy.py` and its TODO are now in version control.
-  Integration into the package remains outstanding.
 - **`CONTRIBUTING.md` troubleshooting section** — covers `uv run --extra dev pytest` failing to
   spawn when the console script is missing from `.venv/bin/`, including the detail that
   `uv sync` reports "no changes" because it verifies packages rather than their scripts, and
@@ -50,9 +49,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Repository published on Codeberg** — the project is now live at
   [codeberg.org/wibbit/freecad-mcp](https://codeberg.org/wibbit/freecad-mcp), with its full
   commit history.
+- **In-server vision summary** — `--vision-summary` replaces viewport screenshots with a short text
+  description from a local Ollama vision model, saving roughly 2,000-5,000 tokens per call.
+  `--vision-model` and `--vision-url` configure it; `execute_code` and `get_view` take an optional
+  `vision_prompt` for per-call questions. Off by default. Replaces the standalone
+  `freecad-mcp-proxy.py`, which is scheduled for removal in a follow-up change.
 
 ### 🐛 Fixed
 
+- **`get_view` ignored `--only-text-feedback`** — it constructed its image response directly rather
+  than going through the shared screenshot helper, so it returned a full base64 screenshot even when
+  the user had asked for text-only output. All screenshot paths now route through one place.
 - **Misleading badges removed** — the MseeP security-assessment badge and the `contrib.rocks`
   contributor image both described upstream's repository, not this one.
 - **Install instructions installed the wrong package** — the documented `uvx freecad-mcp`
